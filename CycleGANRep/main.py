@@ -27,8 +27,6 @@ check_dir = "./output/checkpoints/"
 
 temp_check = 0
 
-
-
 max_epoch = 1
 max_images = 100
 
@@ -48,30 +46,27 @@ class CycleGAN():
 
         ''' 
         This function basically setup variables for taking image input.
-
         filenames_A/filenames_B -> takes the list of all training images
         self.image_A/self.image_B -> Input image with each values ranging from [-1,1]
         '''
-
+        # Save the list of files matching pattern, so it is only computed once
         filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
+        # print(filenames_A)
         self.queue_length_A = tf.size(filenames_A)
+        # print(self.queue_length_A)
         filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
         self.queue_length_B = tf.size(filenames_B)
-        
+        # print(self.queue_length_B)
+        # Output strings (e.g. filenames) to a queue for an input pipeline
         filename_queue_A = tf.train.string_input_producer(filenames_A)
         filename_queue_B = tf.train.string_input_producer(filenames_B)
 
         image_reader = tf.WholeFileReader()
         _, image_file_A = image_reader.read(filename_queue_A)
         _, image_file_B = image_reader.read(filename_queue_B)
-
-        # for 256*256 omages
-        #self.image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[256,256]),127.5),1)
-        #self.image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[256,256]),127.5),1)
-
-        # for 32*32 images
-        self.image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[32,32]),16),1)
-        self.image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[32,32]),16),1)
+        # normalize the image?
+        self.image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[256,256]),127.5),1)
+        self.image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[256,256]),127.5),1)
 
     
 
@@ -80,52 +75,57 @@ class CycleGAN():
 
         '''
         It reads the input into from the image folder.
-
         self.fake_images_A/self.fake_images_B -> List of generated images used for calculation of loss function of Discriminator
         self.A_input/self.B_input -> Stores all the training images in python list
         '''
 
         # Loading images into the tensors
+        # A coordinator for threads.
         coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
 
+        threads = tf.train.start_queue_runners(coord=coord)
+        
         num_files_A = sess.run(self.queue_length_A)
         num_files_B = sess.run(self.queue_length_B)
-
+        # what is pool size?
         self.fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layer))
         self.fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layer))
 
-
+        # max images? why initialize the zeros?
+        # (100, 1, 256, 256, 3)
+        # each input contains 100 pictures
         self.A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
+        # each input contains 100 pictures
         self.B_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
 
         for i in range(max_images): 
+            # the first image
             image_tensor = sess.run(self.image_A)
-            if(image_tensor.size() == img_size*batch_size*img_layer):
-                self.A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
-
+            # print(img_size*batch_size*img_layer)
+            # print(image_tensor.size())
+            
+            # if(image_tensor.size() == img_size*batch_size*img_layer):
+            # reshape each image to a certain size
+            # (1, 256, 256, 3), size of the image
+            self.A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
+        # 100
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
-            if(image_tensor.size() == img_size*batch_size*img_layer):
-                self.B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
-
+            # if(image_tensor.size() == img_size*batch_size*img_layer):
+            self.B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
 
         coord.request_stop()
         coord.join(threads)
 
-
-
-
     def model_setup(self):
 
         ''' This function sets up the model to train
-
         self.input_A/self.input_B -> Set of training images.
         self.fake_A/self.fake_B -> Generated images by corresponding generator of input_A and input_B
         self.lr -> Learning rate variable
         self.cyc_A/ self.cyc_B -> Images generated after feeding self.fake_A/self.fake_B to corresponding generator. This is use to calcualte cyclic loss
         '''
-
+        # real input A image
         self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
         self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
         
@@ -137,13 +137,15 @@ class CycleGAN():
         self.num_fake_inputs = 0
 
         self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
-        
-        """
-        RESNET 9 BLOCKS
+
         with tf.variable_scope("Model") as scope:
+            # real A generates fake B image
             self.fake_B = build_generator_resnet_9blocks(self.input_A, name="g_A")
+            # real B generates fake A image
             self.fake_A = build_generator_resnet_9blocks(self.input_B, name="g_B")
+            # Rec_A is real A through discriminator
             self.rec_A = build_gen_discriminator(self.input_A, "d_A")
+            # real to real discriminator
             self.rec_B = build_gen_discriminator(self.input_B, "d_B")
 
             scope.reuse_variables()
@@ -157,30 +159,10 @@ class CycleGAN():
 
             self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
             self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
-            """
-
-        with tf.variable_scope("Model") as scope:
-            self.fake_B = build_generator_resnet_2blocks(self.input_A, name="g_A")
-            self.fake_A = build_generator_resnet_2blocks(self.input_B, name="g_B")
-            self.rec_A = build_gen_discriminator(self.input_A, "d_A")
-            self.rec_B = build_gen_discriminator(self.input_B, "d_B")
-
-            scope.reuse_variables()
-
-            self.fake_rec_A = build_gen_discriminator(self.fake_A, "d_A")
-            self.fake_rec_B = build_gen_discriminator(self.fake_B, "d_B")
-            self.cyc_A = build_generator_resnet_2blocks(self.fake_B, "g_B")
-            self.cyc_B = build_generator_resnet_2blocks(self.fake_A, "g_A")
-
-            scope.reuse_variables()
-
-            self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
-            self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
 
     def loss_calc(self):
 
         ''' In this function we are defining the variables for loss calcultions and traning model
-
         d_loss_A/d_loss_B -> loss for discriminator A/B
         g_loss_A/g_loss_B -> loss for generator A/B
         *_trainer -> Variaous trainer for above loss functions
@@ -193,10 +175,10 @@ class CycleGAN():
         
         g_loss_A = cyc_loss*10 + disc_loss_B
         g_loss_B = cyc_loss*10 + disc_loss_A
-
+        # fake pool rec A = discriminator(real A) + discriminator(fake A)
+        # d loss A = fake pool A + discriminator(real image A)
         d_loss_A = (tf.reduce_mean(tf.square(self.fake_pool_rec_A)) + tf.reduce_mean(tf.squared_difference(self.rec_A,1)))/2.0
         d_loss_B = (tf.reduce_mean(tf.square(self.fake_pool_rec_B)) + tf.reduce_mean(tf.squared_difference(self.rec_B,1)))/2.0
-
         
         optimizer = tf.train.AdamOptimizer(self.lr, beta1=0.5)
 
@@ -207,6 +189,7 @@ class CycleGAN():
         d_B_vars = [var for var in self.model_vars if 'd_B' in var.name]
         g_B_vars = [var for var in self.model_vars if 'g_B' in var.name]
         
+        # optimize both the fake and real A
         self.d_A_trainer = optimizer.minimize(d_loss_A, var_list=d_A_vars)
         self.d_B_trainer = optimizer.minimize(d_loss_B, var_list=d_B_vars)
         self.g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars)
@@ -215,7 +198,7 @@ class CycleGAN():
         for var in self.model_vars: print(var.name)
 
         #Summary variables for tensorboard
-
+        # you can see the tensorboard
         self.g_A_loss_summ = tf.summary.scalar("g_A_loss", g_loss_A)
         self.g_B_loss_summ = tf.summary.scalar("g_B_loss", g_loss_B)
         self.d_A_loss_summ = tf.summary.scalar("d_A_loss", d_loss_A)
@@ -262,23 +245,24 @@ class CycleGAN():
 
         # Load Dataset from the dataset folder
         self.input_setup()  
-
+        
         #Build the network
         self.model_setup()
-
+        
         #Loss function calculations
         self.loss_calc()
-      
+        
         # Initializing the global variables
-        init = tf.global_variables_initializer()
+        init = (tf.global_variables_initializer(), tf.local_variables_initializer())
+        #The Saver class adds ops to save and restore variables to and from checkpoints. It also provides convenience methods to run these ops.
         saver = tf.train.Saver()     
-
+        
         with tf.Session() as sess:
             sess.run(init)
 
             #Read input to nd array
             self.input_read(sess)
-
+            
             #Restore the model to run the model from last checkpoint
             if to_restore:
                 chkpt_fname = tf.train.latest_checkpoint(check_dir)
@@ -336,16 +320,15 @@ class CycleGAN():
                     
                     self.num_fake_inputs+=1
             
-                        
-
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
             writer.add_graph(sess.graph)
+            
 
     def test(self):
 
 
-        ''' Testing Function'''
+        #  Testing Function
 
         print("Testing the results")
 
@@ -373,7 +356,6 @@ class CycleGAN():
                 imsave("./output/imgs/test/fakeA_"+str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
                 imsave("./output/imgs/test/inputA_"+str(i)+".jpg",((self.A_input[i][0]+1)*127.5).astype(np.uint8))
                 imsave("./output/imgs/test/inputB_"+str(i)+".jpg",((self.B_input[i][0]+1)*127.5).astype(np.uint8))
-
 
 def main():
     

@@ -45,6 +45,12 @@ class CycleGAN()
       - setup loss calculation function
       - save training images (cycle and fake)
       - fake image pool (saves generated image to the corresponding pool of images)
+    - train:
+      - set up the model
+      - set up a session
+    - Test
+      - set up the model
+      - set up a session
 
 
 
