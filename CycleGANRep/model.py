@@ -70,7 +70,7 @@ def build_generator_resnet_2blocks(inputgen, name="generator"):
         o_c5 = general_deconv2d(o_c4, [batch_size,32,32,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
         # not sure about the pad below; present in res_6_blocks but not in res_9_blocks 
         #  o_c5_pad = tf.pad(o_c5,[[0, 0], [ks, ks], [ks, ks], [0, 0]], "REFLECT")
-        o_c6 = general_conv2d(o_c5_pad, img_layer, f, f, 1, 1, 0.02,"VALID","c6",do_relu=False)
+        o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"VALID","c6",do_relu=False)
 
         # Adding the tanh layer
 

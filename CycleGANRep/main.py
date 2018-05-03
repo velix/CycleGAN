@@ -69,6 +69,15 @@ class CycleGAN():
         #self.image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[256,256]),127.5),1)
         #self.image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[256,256]),127.5),1)
 
+        mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+        image = mnist.train.images
+        image = tf.reshape(image, [-1, 28, 28, 1])
+        pad_image = tf.pad(image, [[0, 0], [2,2], [2,2], [0,0]])
+
+        # <class 'tensorflow.python.framework.ops.Tensor'>
+        print(type(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[32,32])))
+        # Tensor("Squeeze_1:0", shape=(32, 32, ?), dtype=float32)
+        print(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[32,32]))
         # for 32*32 images
         self.image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[32,32]),16),1)
         self.image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[32,32]),16),1)
