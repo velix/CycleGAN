@@ -33,18 +33,23 @@ def build_resnet_block(inputres, dim, name="resnet"):
         return tf.nn.relu(out_res + inputres)
 
 
-'''numberOfGEN: the number of Cnn:s in the Encoder
-numberOfres: is the number of resNets
-numberOfDec: is the number of deconvolutional layers in the decoder
-reflection = 'true': sets the reflaction padding as default but you can choose to to set it false
-imageDim: is the image dimension which is used on the decoding part'''
+
 
 def BuildGeneratorAndResNet(inputgen,numberOfGEN, numberOfres,numberOfDec,imageDim,reflection = 'true' , name="generator"):
+'''numberOfGEN: the number of Cnn:s in the Encoder
+    numberOfres: is the number of resNets
+    numberOfDec: is the number of deconvolutional layers in the decoder
+    reflection = 'true': sets the reflaction padding as default but you can choose to to set it false
+    imageDim: is the image dimension which is used on the decoding part'''
+
+
+
+
     with tf.variable_scope(name):
         f = 7
         ks = 3
 
-        '''These variables are used in the docder where dimfromRes is the output
+        '''These variables are used in the decoder where dimfromRes is the output
          from the resNet into the decoder
          ordDim is the ordinary dimension'''
         dimFromRes = [batch_size, imageDim/2, imageDim/2, ngf * 2]
@@ -97,10 +102,13 @@ def BuildGeneratorAndResNet(inputgen,numberOfGEN, numberOfres,numberOfDec,imageD
         return outGenerator
 
 
+
+def buildDiscriminator(inputdisc,numberOfDisc, patch = 'false',name="discriminator"):
 ''' This function creates the discriminator
     We can choose to use a patch discrimiantor or an ordinary discrimiantor
     by setting patch to false or true respectively'''
-def buildDiscriminator(inputdisc,numberOfDisc, patch = 'false',name="discriminator"):
+
+
     with tf.variable_scope(name):
         f = 4
         ''' This if statement initializes the first convolutional layer depending on whether
