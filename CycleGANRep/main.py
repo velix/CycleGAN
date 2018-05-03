@@ -9,13 +9,15 @@ import time
 import random
 import sys
 
+import matplotlib.pyplot as plt     # 123123123
 
 from layers import *
 from model import *
 
-img_height = 256
-img_width = 256
-img_layer = 3
+img_height = 32
+img_width = 32
+img_layerA = 3
+img_layerB = 3
 img_size = img_height * img_width
 
 to_train = True
@@ -39,8 +41,8 @@ batch_size = 1
 pool_size = 50
 sample_size = 10
 save_training_images = True
-ngf = 32
-ndf = 64
+ngf = 4
+ndf = 8
 
 class CycleGAN():
 
@@ -53,9 +55,10 @@ class CycleGAN():
         self.image_A/self.image_B -> Input image with each values ranging from [-1,1]
         '''
 
-        filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
+        filenames_A = tf.train.match_filenames_once("./input/trainingSampleA/*.jpg")    
         self.queue_length_A = tf.size(filenames_A)
-        filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
+        
+        filenames_B = tf.train.match_filenames_once("./input/trainingSampleB/*.png")    
         self.queue_length_B = tf.size(filenames_B)
         
         filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -65,27 +68,25 @@ class CycleGAN():
         _, image_file_A = image_reader.read(filename_queue_A)
         _, image_file_B = image_reader.read(filename_queue_B)
 
-        # for 256*256 omages
-        #self.image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[256,256]),127.5),1)
-        #self.image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[256,256]),127.5),1)
+        paddings = [[2,2], [2,2], [0, 0]]
 
-        mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-        image = mnist.train.images
-        image = tf.reshape(image, [-1, 28, 28, 1])
-        pad_image = tf.pad(image, [[0, 0], [2,2], [2,2], [0,0]])
-
-        # <class 'tensorflow.python.framework.ops.Tensor'>
-        print(type(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[32,32])))
-        # Tensor("Squeeze_1:0", shape=(32, 32, ?), dtype=float32)
-        print(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[32,32]))
-        # for 32*32 images
-        self.image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[32,32]),16),1)
-        self.image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[32,32]),16),1)
-
+        image = tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[28,28])
+        image = tf.reshape(image, [28, 28, 1])
+        # add the depth from 1 to 3
+        image = tf.concat([image, image, image], axis=2)
+        images = tf.pad(image, paddings, mode='CONSTANT', name=None)
+        # with tf.Session():
+          #  images = images.eval()
+            
+        # plt.imshow(images.reshape(32, 32, 3))
+        # plt.show()
+        self.image_A = tf.subtract(tf.div(images,16),1)
+        imageB = tf.reshape(tf.image.resize_images(tf.image.decode_png(image_file_B),[32,32]), [32, 32, 3])
+        
+        self.image_B = tf.subtract(tf.div(imageB, 16),1)
+        print("passed")
     
-
     def input_read(self, sess):
-
 
         '''
         It reads the input into from the image folder.
@@ -101,29 +102,26 @@ class CycleGAN():
         num_files_A = sess.run(self.queue_length_A)
         num_files_B = sess.run(self.queue_length_B)
 
-        self.fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layer))
-        self.fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layer))
+        self.fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layerA))
+        self.fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layerB))
 
-
-        self.A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
-        self.B_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
+        self.A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layerA))
+        self.B_input = np.zeros((max_images, batch_size, img_height, img_width, img_layerB))
 
         for i in range(max_images): 
             image_tensor = sess.run(self.image_A)
-            if(image_tensor.size() == img_size*batch_size*img_layer):
-                self.A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
+            # if(image_tensor.size() == img_size*batch_size*img_layerA):
+            self.A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layerA))
 
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
-            if(image_tensor.size() == img_size*batch_size*img_layer):
-                self.B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
-
+            print(image_tensor)
+            print(type(image_tensor), " tensor image B")
+            # if(image_tensor.size() == img_size*batch_size*img_layerB):
+            self.B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layerB))
 
         coord.request_stop()
         coord.join(threads)
-
-
-
 
     def model_setup(self):
 
@@ -135,11 +133,11 @@ class CycleGAN():
         self.cyc_A/ self.cyc_B -> Images generated after feeding self.fake_A/self.fake_B to corresponding generator. This is use to calcualte cyclic loss
         '''
 
-        self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
-        self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
+        self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layerA], name="input_A")
+        self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layerB], name="input_B")
         
-        self.fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_A")
-        self.fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_B")
+        self.fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layerA], name="fake_pool_A")
+        self.fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layerB], name="fake_pool_B")
 
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
 
@@ -147,8 +145,8 @@ class CycleGAN():
 
         self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
         
-        """
-        RESNET 9 BLOCKS
+
+        # RESNET 9 BLOCKS
         with tf.variable_scope("Model") as scope:
             self.fake_B = build_generator_resnet_9blocks(self.input_A, name="g_A")
             self.fake_A = build_generator_resnet_9blocks(self.input_B, name="g_B")
@@ -166,8 +164,8 @@ class CycleGAN():
 
             self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
             self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
-            """
-
+           
+        '''
         with tf.variable_scope("Model") as scope:
             self.fake_B = build_generator_resnet_2blocks(self.input_A, name="g_A")
             self.fake_A = build_generator_resnet_2blocks(self.input_B, name="g_B")
@@ -185,7 +183,7 @@ class CycleGAN():
 
             self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
             self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
-
+        '''
     def loss_calc(self):
 
         ''' In this function we are defining the variables for loss calcultions and traning model
@@ -237,12 +235,12 @@ class CycleGAN():
 
         for i in range(0,10):
             fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run([self.fake_A, self.fake_B, self.cyc_A, self.cyc_B],feed_dict={self.input_A:self.A_input[i], self.input_B:self.B_input[i]})
-            imsave("./output/imgs/fakeB_"+ str(epoch) + "_" + str(i)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
-            imsave("./output/imgs/fakeA_"+ str(epoch) + "_" + str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
-            imsave("./output/imgs/cycA_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-            imsave("./output/imgs/cycB_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
-            imsave("./output/imgs/inputA_"+ str(epoch) + "_" + str(i)+".jpg",((self.A_input[i][0]+1)*127.5).astype(np.uint8))
-            imsave("./output/imgs/inputB_"+ str(epoch) + "_" + str(i)+".jpg",((self.B_input[i][0]+1)*127.5).astype(np.uint8))
+            imsave("./output/imgs/fakeB_"+ str(epoch) + "_" + str(i)+".jpg",((fake_A_temp[0]+1)*16).astype(np.uint8))
+            imsave("./output/imgs/fakeA_"+ str(epoch) + "_" + str(i)+".jpg",((fake_B_temp[0]+1)*16).astype(np.uint8))
+            imsave("./output/imgs/cycA_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_A_temp[0]+1)*16).astype(np.uint8))
+            imsave("./output/imgs/cycB_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_B_temp[0]+1)*16).astype(np.uint8))
+            imsave("./output/imgs/inputA_"+ str(epoch) + "_" + str(i)+".jpg",((self.A_input[i][0]+1)*16).astype(np.uint8))
+            imsave("./output/imgs/inputB_"+ str(epoch) + "_" + str(i)+".jpg",((self.B_input[i][0]+1)*16).astype(np.uint8))
 
     def fake_image_pool(self, num_fakes, fake, fake_pool):
         ''' This function saves the generated image to corresponding pool of images.
@@ -271,15 +269,17 @@ class CycleGAN():
 
         # Load Dataset from the dataset folder
         self.input_setup()  
-
-        #Build the network
+    
+    
+    #Build the network
         self.model_setup()
 
         #Loss function calculations
         self.loss_calc()
-      
+    
         # Initializing the global variables
-        init = tf.global_variables_initializer()
+        init = (tf.global_variables_initializer(), tf.local_variables_initializer())
+        # init = tf.global_variables_initializer()
         saver = tf.train.Saver()     
 
         with tf.Session() as sess:
@@ -378,10 +378,10 @@ class CycleGAN():
 
             for i in range(0,100):
                 fake_A_temp, fake_B_temp = sess.run([self.fake_A, self.fake_B],feed_dict={self.input_A:self.A_input[i], self.input_B:self.B_input[i]})
-                imsave("./output/imgs/test/fakeB_"+str(i)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/imgs/test/fakeA_"+str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/imgs/test/inputA_"+str(i)+".jpg",((self.A_input[i][0]+1)*127.5).astype(np.uint8))
-                imsave("./output/imgs/test/inputB_"+str(i)+".jpg",((self.B_input[i][0]+1)*127.5).astype(np.uint8))
+                imsave("./output/imgs/test/fakeB_"+str(i)+".jpg",((fake_A_temp[0]+1)*16).astype(np.uint8))
+                imsave("./output/imgs/test/fakeA_"+str(i)+".jpg",((fake_B_temp[0]+1)*16).astype(np.uint8))
+                imsave("./output/imgs/test/inputA_"+str(i)+".jpg",((self.A_input[i][0]+1)*16).astype(np.uint8))
+                imsave("./output/imgs/test/inputB_"+str(i)+".jpg",((self.B_input[i][0]+1)*16).astype(np.uint8))
 
 
 def main():

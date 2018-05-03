@@ -32,14 +32,14 @@ ndf = 64
 # update the variables
 img_height = 32
 img_width = 32
-img_layer = 1
+img_layer = 3
 img_size = img_height * img_width
 
 
 batch_size = 1
 pool_size = 50
-ngf = 32
-ndf = 64
+ngf = 8
+ndf = 16
 
 
 def build_resnet_block(inputres, dim, name="resnet"):
