@@ -10,7 +10,6 @@ from PIL import Image
 import time
 import random
 
-
 from layers import *
 
 
