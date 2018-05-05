@@ -1,3 +1,4 @@
+'''
 import tensorflow as tf
 
 
@@ -16,8 +17,7 @@ def build_resnet_block(inputres, dim, name="resnet"):
         
         return tf.nn.relu(out_res + inputres) # ?? 
     
-def build_generator_resnet_nblocks(inputgen, f_size, conv_size, c_layers_start, res_layers, c_layers_end, name="generator"):
-    pass
+
     
 # fl = first layer
 def build_generator_c_start(inputgen, fl_conv, conv_size, fl_stride=1, stride=2, g_name = "generator", name="c"):
@@ -50,6 +50,11 @@ def build_n_resnet_blocks(input_c, res_num, g_name = "generator", name='r'):
 
 def build_generator_c_end(input_r, g_name="generator"):
     with tf.variable_scope(g_name):
-        
-    pass 
+
+    pass
+
+def build_generator_resnet_nblocks(inputgen, f_size, conv_size, c_layers_start, res_layers, c_layers_end, name="generator"):
+    build_generator_c_start
+
     
+'''

@@ -80,7 +80,9 @@ class CycleGAN():
             
         # plt.imshow(images.reshape(32, 32, 3))
         # plt.show()
-        self.image_A = tf.subtract(tf.div(images,16),1)
+        # convert the color of
+        self.image_A = tf.subtract(1-tf.div(images,16),1)
+        # self.image_A = 1 - self.image_A
         imageB = tf.reshape(tf.image.resize_images(tf.image.decode_png(image_file_B),[32,32]), [32, 32, 3])
         
         self.image_B = tf.subtract(tf.div(imageB, 16),1)
@@ -102,6 +104,7 @@ class CycleGAN():
         num_files_A = sess.run(self.queue_length_A)
         num_files_B = sess.run(self.queue_length_B)
 
+        # pool is the batch?
         self.fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layerA))
         self.fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layerB))
 
