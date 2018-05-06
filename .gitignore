@@ -102,3 +102,4 @@ ENV/
 
 # directories
 papers/
+.vscode/
