@@ -5,7 +5,7 @@ import random
 import sys
 
 from layers import *
-from old_model import *
+from model import *
 
 img_height = 32
 img_width = 32
@@ -23,22 +23,22 @@ pool_size = 50
 max_images = 100
 save_training_images = True
 
-class CycleGAN:
-    def input_setup(self):
-        ''' 
-        This function basically setup variables for taking image input.
 
+class CycleGAN:
+
+    def input_setup(self):
+        '''
+        This function basically setup variables for taking image input.
         filenames_A/filenames_B -> takes the list of all training images
         self.image_A/self.image_B -> Input image with each values ranging from [-1,1]
         '''
+
         # it has type of variable
-        filenames_A = tf.train.match_filenames_once("./input/trainingSampleA/*.jpg")    
+        filenames_A = tf.train.match_filenames_once("./input/trainingSampleA/*.jpg")
         self.queue_length_A = tf.size(filenames_A)
-        # print(filenames_A)
-        # print(type(filenames_A))
-        filenames_B = tf.train.match_filenames_once("./input/trainingSampleB/*.png")    
+        filenames_B = tf.train.match_filenames_once("./input/trainingSampleB/*.png")
         self.queue_length_B = tf.size(filenames_B)
-        
+
         filename_queue_A = tf.train.string_input_producer(filenames_A)
         filename_queue_B = tf.train.string_input_producer(filenames_B)
 
@@ -181,19 +181,18 @@ class CycleGAN:
         g_loss_A/g_loss_B -> loss for generator A/B
         *_trainer -> Variaous trainer for above loss functions
         *_summ -> Summary variables for above loss functions'''
-        
+
         cyc_loss = tf.reduce_mean(tf.abs(self.input_A-self.cyc_A)) + tf.reduce_mean(tf.abs(self.input_B-self.cyc_B))
-        
+
         disc_loss_A = tf.reduce_mean(tf.squared_difference(self.fake_rec_A,1))
         disc_loss_B = tf.reduce_mean(tf.squared_difference(self.fake_rec_B,1))
-        
+
         g_loss_A = cyc_loss*10 + disc_loss_B
         g_loss_B = cyc_loss*10 + disc_loss_A
 
         d_loss_A = (tf.reduce_mean(tf.square(self.fake_pool_rec_A)) + tf.reduce_mean(tf.squared_difference(self.rec_A,1)))/2.0
         d_loss_B = (tf.reduce_mean(tf.square(self.fake_pool_rec_B)) + tf.reduce_mean(tf.squared_difference(self.rec_B,1)))/2.0
 
-        
         optimizer = tf.train.AdamOptimizer(self.lr, beta1=0.5)
         # Returns all variables created with trainable=True
         # A list of Variable objects.
@@ -218,12 +217,13 @@ class CycleGAN:
         self.d_A_loss_summ = tf.summary.scalar("d_A_loss", d_loss_A)
         self.d_B_loss_summ = tf.summary.scalar("d_B_loss", d_loss_B)
 
-
     def train(self):
+        '''
+        Training Function
+        '''
 
-        ''' Training Function '''
         # Load Dataset from the dataset folder
-        self.input_setup()  
+        self.input_setup()
         # Build the network
         self.model_setup()
         # Loss function calculations
@@ -274,7 +274,7 @@ class CycleGAN:
                     )
                     # print("fake B temp ", fake_B_temp)
                     # print("summary str ", summary_str)
-                    writer.add_summary(summary_str, epoch*max_images + ptr)                    
+                    writer.add_summary(summary_str, epoch*max_images + ptr)
                     fake_B_temp1 = self.fake_image_pool(self.num_fake_inputs, fake_B_temp, self.fake_images_B)
                     
                     # Optimizing the D_B network
@@ -330,6 +330,7 @@ class CycleGAN:
             imsave("./output/imgs/cycB_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_B_temp[0]+1)*16).astype(np.uint8))
             imsave("./output/imgs/inputA_"+ str(epoch) + "_" + str(i)+".jpg",((self.A_input[i][0]+1)*16).astype(np.uint8))
             imsave("./output/imgs/inputB_"+ str(epoch) + "_" + str(i)+".jpg",((self.B_input[i][0]+1)*16).astype(np.uint8))
+
     def fake_image_pool(self, num_fakes, fake, fake_pool):
         ''' This function saves the generated image to corresponding pool of images.
         In starting. It keeps on feeling the pool till it is full and then randomly selects an
@@ -348,7 +349,6 @@ class CycleGAN:
             else :
                 return fake
 
-
 def main():
     model = CycleGAN()
     if to_train:
@@ -357,5 +357,4 @@ def main():
         model.test()
 
 if __name__ == '__main__':
-
     main()
