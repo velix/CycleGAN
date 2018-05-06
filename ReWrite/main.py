@@ -134,8 +134,8 @@ class CycleGAN:
             # RESNET 9 BLOCKS
             with tf.variable_scope("Model") as scope:
                 # build_generator Tensor("Model/g_A/t1:0", shape=(1, 36, 36, 3), dtype=float32)
-                self.fake_B = build_generator_resnet_6blocks(self.input_A, name="g_A")
-                self.fake_A = build_generator_resnet_6blocks(self.input_B, name="g_B")
+                self.fake_B = build_generator_resnet_2blocks(self.input_A, name="g_A")
+                self.fake_A = build_generator_resnet_2blocks(self.input_B, name="g_B")
                 
                 self.rec_A = build_gen_discriminator(self.input_A, "d_A")
                 self.rec_B = build_gen_discriminator(self.input_B, "d_B")
@@ -145,8 +145,8 @@ class CycleGAN:
                 self.fake_rec_A = build_gen_discriminator(self.fake_A, "d_A")
                 self.fake_rec_B = build_gen_discriminator(self.fake_B, "d_B")
                 
-                self.cyc_A = build_generator_resnet_6blocks(self.fake_B, "g_B")
-                self.cyc_B = build_generator_resnet_6blocks(self.fake_A, "g_A")
+                self.cyc_A = build_generator_resnet_2blocks(self.fake_B, "g_B")
+                self.cyc_B = build_generator_resnet_2blocks(self.fake_A, "g_A")
                 
                 scope.reuse_variables()
 
@@ -243,7 +243,7 @@ class CycleGAN:
             writer = tf.summary.FileWriter("./output/2")
             if not os.path.exists(check_dir):
                 os.makedirs(check_dir)
-            print("no problem")
+            # print("no problem")
             # Training Loop
             for epoch in range(sess.run(self.global_step),100):                
                 print ("In the epoch ", epoch)
