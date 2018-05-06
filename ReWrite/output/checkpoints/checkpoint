@@ -1,6 +1,0 @@
-model_checkpoint_path: "cyclegan-21"
-all_model_checkpoint_paths: "cyclegan-17"
-all_model_checkpoint_paths: "cyclegan-18"
-all_model_checkpoint_paths: "cyclegan-19"
-all_model_checkpoint_paths: "cyclegan-20"
-all_model_checkpoint_paths: "cyclegan-21"
