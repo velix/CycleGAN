@@ -4,8 +4,7 @@ import os
 import random
 import sys
 
-from layers import *
-from model import *
+from model import build_generator_resnet_2blocks, build_gen_discriminator
 
 img_height = 32
 img_width = 32
@@ -33,7 +32,6 @@ class CycleGAN:
         self.image_A/self.image_B -> Input image with each values ranging from [-1,1]
         '''
 
-        # it has type of variable
         filenames_A = tf.train.match_filenames_once("./input/trainingSampleA/*.jpg")
         self.queue_length_A = tf.size(filenames_A)
         filenames_B = tf.train.match_filenames_once("./input/trainingSampleB/*.png")
@@ -46,29 +44,22 @@ class CycleGAN:
         _, image_file_A = image_reader.read(filename_queue_A)
         _, image_file_B = image_reader.read(filename_queue_B)
 
-        paddings = [[2,2], [2,2], [0, 0]]
-
-        image = tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[28,28])
+        # Operations to resize images to same size
+        paddings = [[2, 2], [2, 2], [0, 0]]
+        image = tf.image.resize_images(tf.image.decode_jpeg(image_file_A),
+                                       [28, 28])
         image = tf.reshape(image, [28, 28, 1])
-        # add the depth from 1 to 3
         image = tf.concat([image, image, image], axis=2)
         images = tf.pad(image, paddings, mode='CONSTANT', name=None)
-        # with tf.Session():
-          #  images = images.eval()
-            
-        # plt.imshow(images.reshape(32, 32, 3))
-        # plt.show()
-        self.image_A = tf.subtract(tf.div(images,16),1)
+
+        self.image_A = tf.subtract(tf.div(images, 16), 1)
         # convert black background to white
-        # don't work
-        # self.image_A = 1 - self.image_A
-        imageB = tf.reshape(tf.image.resize_images(tf.image.decode_png(image_file_B),[32,32]), [32, 32, 3])
-        
-        self.image_B = tf.subtract(tf.div(imageB, 16),1)
-        # print("here")
+        imageB = tf.reshape(tf.image.resize_images(
+                                        tf.image.decode_png(image_file_B),
+                                        [32, 32]), [32, 32, 3])
+        self.image_B = tf.subtract(tf.div(imageB, 16), 1)
 
     def input_read(self, sess):
-        
         '''
         It reads the input into from the image folder.
 
@@ -77,87 +68,84 @@ class CycleGAN:
         '''
 
         # Loading images into the tensors
-        # This class implements a simple mechanism to coordinate the termination of a set of threads
+        # This class implements a simple mechanism to coordinate
+        # the termination of a set of threads
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         # run the queue
         num_files_A = sess.run(self.queue_length_A)
         num_files_B = sess.run(self.queue_length_B)
         # it's a pool size of 50
-        self.fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layerA))
-        self.fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layerB))
+        self.fake_images_A = np.zeros((pool_size, 1, img_height, img_width, img_layerA))
+        self.fake_images_B = np.zeros((pool_size, 1, img_height, img_width, img_layerB))
         print(self.fake_images_A)
         print(type(self.fake_images_A))
         self.A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layerA))
         self.B_input = np.zeros((max_images, batch_size, img_height, img_width, img_layerB))
 
-        for i in range(max_images): 
+        for i in range(max_images):
             # after running the queue then ...
             image_tensor = sess.run(self.image_A)
             # if(image_tensor.size() == img_size*batch_size*img_layerA):
-            # save all imageA to numpy array 
-            self.A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layerA))
+            # save all imageA to numpy array
+            self.A_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerA))
 
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
             # print(image_tensor)
             # print(type(image_tensor), " tensor image B")
             # if(image_tensor.size() == img_size*batch_size*img_layerB):
-            self.B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layerB))
+            self.B_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerB))
         # for the exception
         coord.request_stop()
         # Wait for all the threads to terminate.
         coord.join(threads)
+
     def model_setup(self):
-
             ''' This function sets up the model to train
-
             self.input_A/self.input_B -> Set of training images.
-            self.fake_A/self.fake_B -> Generated images by corresponding generator of input_A and input_B
+            self.fake_A/self.fake_B -> Generated images by corresponding
+                                        generator of input_A and input_B
             self.lr -> Learning rate variable
-            self.cyc_A/ self.cyc_B -> Images generated after feeding self.fake_A/self.fake_B to corresponding generator. This is use to calcualte cyclic loss
+            self.cyc_A/ self.cyc_B -> Images generated after feeding
+                                    self.fake_A/self.fake_B to corresponding generator.
+                                    This is use to calcualte cyclic loss
             '''
 
-            self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layerA], name="input_A")
-            self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layerB], name="input_B")
-            
-            self.fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layerA], name="fake_pool_A")
-            self.fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layerB], name="fake_pool_B")
+            self.input_A = tf.placeholder(
+                                tf.float32,
+                                [batch_size, img_width, img_height, img_layerA],
+                                name="input_A"
+                            )
+            self.input_B = tf.placeholder(
+                                tf.float32,
+                                [batch_size, img_width, img_height, img_layerB],
+                                name="input_B"
+                            )
+
+            self.fake_pool_A = tf.placeholder(
+                                tf.float32,
+                                [None, img_width, img_height, img_layerA],
+                                name="fake_pool_A"
+                            )
+            self.fake_pool_B = tf.placeholder(
+                                tf.float32,
+                                [None, img_width, img_height, img_layerB],
+                                name="fake_pool_B"
+                            )
 
             self.global_step = tf.Variable(0, name="global_step", trainable=False)
 
             self.num_fake_inputs = 0
 
             self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
-            
 
             # RESNET 9 BLOCKS
             with tf.variable_scope("Model") as scope:
                 # build_generator Tensor("Model/g_A/t1:0", shape=(1, 36, 36, 3), dtype=float32)
                 self.fake_B = build_generator_resnet_2blocks(self.input_A, name="g_A")
                 self.fake_A = build_generator_resnet_2blocks(self.input_B, name="g_B")
-                
-                self.rec_A = build_gen_discriminator(self.input_A, "d_A")
-                self.rec_B = build_gen_discriminator(self.input_B, "d_B")
-                
-                scope.reuse_variables()
 
-                self.fake_rec_A = build_gen_discriminator(self.fake_A, "d_A")
-                self.fake_rec_B = build_gen_discriminator(self.fake_B, "d_B")
-                
-                self.cyc_A = build_generator_resnet_2blocks(self.fake_B, "g_B")
-                self.cyc_B = build_generator_resnet_2blocks(self.fake_A, "g_A")
-                
-                scope.reuse_variables()
-
-                self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
-                self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
-                '''
-                '''
-            '''
-            with tf.variable_scope("Model") as scope:
-                self.fake_B = build_generator_resnet_2blocks(self.input_A, name="g_A")
-                self.fake_A = build_generator_resnet_2blocks(self.input_B, name="g_B")
                 self.rec_A = build_gen_discriminator(self.input_A, "d_A")
                 self.rec_B = build_gen_discriminator(self.input_B, "d_B")
 
@@ -165,6 +153,7 @@ class CycleGAN:
 
                 self.fake_rec_A = build_gen_discriminator(self.fake_A, "d_A")
                 self.fake_rec_B = build_gen_discriminator(self.fake_B, "d_B")
+
                 self.cyc_A = build_generator_resnet_2blocks(self.fake_B, "g_B")
                 self.cyc_B = build_generator_resnet_2blocks(self.fake_A, "g_A")
 
@@ -172,20 +161,24 @@ class CycleGAN:
 
                 self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
                 self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
-            '''
     
     def loss_calc(self):
-        ''' In this function we are defining the variables for loss calcultions and traning model
+        '''
+        In this function we are defining the variables for
+        loss calcultions and traning model
 
         d_loss_A/d_loss_B -> loss for discriminator A/B
         g_loss_A/g_loss_B -> loss for generator A/B
         *_trainer -> Variaous trainer for above loss functions
-        *_summ -> Summary variables for above loss functions'''
+        *_summ -> Summary variables for above loss functions
+        '''
 
-        cyc_loss = tf.reduce_mean(tf.abs(self.input_A-self.cyc_A)) + tf.reduce_mean(tf.abs(self.input_B-self.cyc_B))
+        diff_from_original_A = tf.reduce_mean(tf.abs(self.input_A-self.cyc_A))
+        diff_from_original_B = tf.reduce_mean(tf.abs(self.input_B-self.cyc_B))
+        cyc_loss = diff_from_original_A + diff_from_original_B
 
-        disc_loss_A = tf.reduce_mean(tf.squared_difference(self.fake_rec_A,1))
-        disc_loss_B = tf.reduce_mean(tf.squared_difference(self.fake_rec_B,1))
+        disc_loss_A = tf.reduce_mean(tf.squared_difference(self.fake_rec_A, 1))
+        disc_loss_B = tf.reduce_mean(tf.squared_difference(self.fake_rec_B, 1))
 
         g_loss_A = cyc_loss*10 + disc_loss_B
         g_loss_B = cyc_loss*10 + disc_loss_A
@@ -312,7 +305,7 @@ class CycleGAN:
 
                     writer.add_summary(summary_str, epoch*max_images + ptr)
                     
-                    self.num_fake_inputs+=1
+                    self.num_fake_inputs += 1
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
             writer.add_graph(sess.graph)
