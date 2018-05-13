@@ -32,11 +32,11 @@ class CycleGAN:
         self.image_A/self.image_B -> Input image with each values ranging from [-1,1]
         '''
         # it has type of variable
-        filenames_A = tf.train.match_filenames_once("./input/trainingSampleA/*.jpg")    
+        filenames_A = tf.train.match_filenames_once("./input/trainA/*.jpg")    
         self.queue_length_A = tf.size(filenames_A)
         # print(filenames_A)
         # print(type(filenames_A))
-        filenames_B = tf.train.match_filenames_once("./input/trainingSampleB/*.jpg")    
+        filenames_B = tf.train.match_filenames_once("./input/trainB/*.png")    
         self.queue_length_B = tf.size(filenames_B)
         
         filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -46,31 +46,30 @@ class CycleGAN:
         _, image_file_A = image_reader.read(filename_queue_A)
         _, image_file_B = image_reader.read(filename_queue_B)
 
-        paddings = [[2,2], [2,2], [0, 0]]
+        # paddings = [[2,2], [2,2], [0, 0]]
 
-        image = tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[28,28])
-        image = tf.reshape(image, [28, 28, 1])
+        imageA = tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[28,28])
+        imageA = tf.reshape(imageA, [28, 28, 1])
         # add the depth from 1 to 3
-        image = tf.concat([image, image, image], axis=2)
-        images = tf.pad(image, paddings, mode='CONSTANT', name=None)
+        imageA = tf.concat([imageA, imageA, imageA], axis=2)
+#         imageA = tf.pad(image, paddings, mode='CONSTANT', name=None)
         # with tf.Session():
           #  images = images.eval()
             
         # plt.imshow(images.reshape(32, 32, 3))
         # plt.show()
-        self.image_A = tf.subtract(tf.div(images,16),1)
+        self.image_A = tf.subtract(tf.div(imageA,14),1)
         # convert black background to white
         # don't work
         # self.image_A = 1 - self.image_A
         # imageB = tf.reshape(tf.image.resize_images(tf.image.decode_jpg(image_file_B),[32,32]), [32, 32, 3])
-        
-        imageB = tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[28,28])
-        imageB = tf.reshape(imageB, [28, 28, 1])
+        print("so far so good")
+        imageB = tf.image.resize_images(tf.image.decode_png(image_file_B),[28,28])
+        imageB = tf.reshape(imageB, [28, 28, 3])
         # add the depth from 1 to 3
-        imageB = tf.concat([imageB, imageB, imageB], axis=2)
-        imagesB = tf.pad(imageB, paddings, mode='CONSTANT', name=None)
-
-        self.image_B = tf.subtract(tf.div(imagesB, 16),1)
+        # imageB = tf.concat([imageB, imageB, imageB], axis=2)
+        # imagesB = tf.pad(imageB, paddings, mode='CONSTANT', name=None)
+        self.image_B = tf.subtract(tf.div(imageB, 14),1)
         # print("here")
 
     def input_read(self, sess):
