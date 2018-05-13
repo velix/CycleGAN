@@ -36,7 +36,7 @@ class CycleGAN:
         self.queue_length_A = tf.size(filenames_A)
         # print(filenames_A)
         # print(type(filenames_A))
-        filenames_B = tf.train.match_filenames_once("./input/trainingSampleB/*.png")    
+        filenames_B = tf.train.match_filenames_once("./input/trainingSampleB/*.jpg")    
         self.queue_length_B = tf.size(filenames_B)
         
         filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -62,9 +62,15 @@ class CycleGAN:
         # convert black background to white
         # don't work
         # self.image_A = 1 - self.image_A
-        imageB = tf.reshape(tf.image.resize_images(tf.image.decode_png(image_file_B),[32,32]), [32, 32, 3])
+        # imageB = tf.reshape(tf.image.resize_images(tf.image.decode_jpg(image_file_B),[32,32]), [32, 32, 3])
         
-        self.image_B = tf.subtract(tf.div(imageB, 16),1)
+        imageB = tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[28,28])
+        imageB = tf.reshape(imageB, [28, 28, 1])
+        # add the depth from 1 to 3
+        imageB = tf.concat([imageB, imageB, imageB], axis=2)
+        imagesB = tf.pad(imageB, paddings, mode='CONSTANT', name=None)
+
+        self.image_B = tf.subtract(tf.div(imagesB, 16),1)
         # print("here")
 
     def input_read(self, sess):
