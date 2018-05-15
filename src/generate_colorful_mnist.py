@@ -81,4 +81,8 @@ for i in range(count):
     label = 'img_{}_{}'.format(i, x_labels[indexes[i]])
 
     filename = '{}.jpg'.format(label)
+
+    if not os.path.exists(os.path.join('input', 'colorful_mnist')):
+        os.mkdir(os.path.join('input', 'colorful_mnist'))
+
     toimage(examples[i, :, :, :], cmin=.0).save(os.path.join('input', 'colorful_mnist', filename))
