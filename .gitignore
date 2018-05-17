@@ -104,5 +104,6 @@ ENV/
 papers/
 .vscode/
 input/
-output/
+output/img/
+output/checkpoints/
 
