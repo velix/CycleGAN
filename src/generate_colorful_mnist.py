@@ -50,32 +50,20 @@ def get_mnist_batch(batch_size=256, change_colors=False):
 mnist_train = input_data.read_data_sets("mnist").train
 
 x_train = mnist_train.images
+
 x_labels = mnist_train.labels
 x_train = x_train.reshape(-1, 28, 28, 1).astype(np.float32)
 
 # Read Lena image
 lena = PILImage.open('./resources/Lenna.png')
 
-# plt.imshow(lena)
-# plt.axis('off')
-# plt.show()
-
-count = 400
+count = 2000
 indexes, examples = get_mnist_batch(count)
 
 print(np.shape(examples))
 
 # Map back to normal range
 # examples = (examples + 1) * 0.5
-
-# plt.figure(figsize=(15, 3))
-# for i in range(count):
-#     plt.subplot(2, count // 2, i+1)
-#     plt.imshow(examples[i])
-#     plt.axis('off')
-
-# plt.tight_layout()
-# plt.show()
 
 for i in range(count):
     label = 'img_{}_{}'.format(i, x_labels[indexes[i]])

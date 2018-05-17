@@ -5,7 +5,8 @@ import os
 import random
 import time
 
-from model import build_generator_resnet_1block, build_gen_discriminator
+from model import (build_generator_resnet_1block, build_gen_discriminator,
+                   build_generator_resnet_2blocks)
 
 img_height = 28
 img_width = 28
@@ -18,12 +19,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
+summary_dir = "./output/2/exp_4"
 batch_size = 1
 pool_size = 50
 max_images = 100
 save_training_images = True
 
-EPOCHS = 50
+EPOCHS = 100
 
 
 class CycleGAN:
@@ -35,7 +37,7 @@ class CycleGAN:
         self.image_A/self.image_B -> Input image with each values ranging from [-1,1]
         '''
 
-        filenames_A = tf.train.match_filenames_once("./input/trainingSampleA/*.jpg")
+        filenames_A = tf.train.match_filenames_once("./input/mnist/*.jpg")
         self.queue_length_A = tf.size(filenames_A)
         filenames_B = tf.train.match_filenames_once("./input/colorful_mnist/*.jpg")
         self.queue_length_B = tf.size(filenames_B)
@@ -47,16 +49,15 @@ class CycleGAN:
         _, image_file_A = image_reader.read(filename_queue_A)
         _, image_file_B = image_reader.read(filename_queue_B)
 
-        image = tf.image.decode_jpeg(image_file_A)
-        # Add 3 channels to image
-        self.image_A = tf.concat([image, image, image], axis=2)
-        # self.image_A = tf.subtract(tf.div(image_A, 14), 1)
+        image_A = tf.image.decode_jpeg(image_file_A)
+        image_A = tf.image.per_image_standardization(image_A)
+        self.image_A = image_A
+        # self.image_A = tf.subtract(tf.div(self.image_A, 14), 1)
 
-        # image_B = tf.image.resize_images(tf.image.decode_jpeg(image_file_B), [28, 28])
         image_B = tf.image.decode_jpeg(image_file_B)
-        # image_B = tf.reshape(image_B, [28, 28, 3])
+        image_B = tf.image.per_image_standardization(image_B)
         self.image_B = image_B
-        # self.image_B = tf.subtract(tf.div(image_B, 14), 1)
+        # self.image_B = tf.subtract(tf.div(self.image_B, 14), 1)
 
     def input_read(self, sess):
         '''
@@ -84,14 +85,21 @@ class CycleGAN:
         for i in range(max_images):
             # after running the queue then ...
             image_tensor = sess.run(self.image_A)
-            # if(image_tensor.size() == img_size*batch_size*img_layerA):
-            # save all imageA to numpy array
             self.A_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerA))
+
+        print(np.mean(self.A_input[0]))
+        print(np.max(self.A_input[0]))
+        print(np.min(self.A_input[0]))
+        print()
 
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
-            # if(image_tensor.size() == img_size*batch_size*img_layerB):
             self.B_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerB))
+
+        print(np.mean(self.B_input[0]))
+        print(np.max(self.B_input[0]))
+        print(np.min(self.B_input[0]))
+        print()
 
         # for the exception
         coord.request_stop()
@@ -138,8 +146,8 @@ class CycleGAN:
             self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
             with tf.variable_scope("Model") as scope:
-                self.fake_B = build_generator_resnet_1block(self.input_A, name="g_A")
-                self.fake_A = build_generator_resnet_1block(self.input_B, name="g_B")
+                self.fake_B = build_generator_resnet_2blocks(self.input_A, name="g_A")
+                self.fake_A = build_generator_resnet_2blocks(self.input_B, name="g_B")
 
                 self.rec_A = build_gen_discriminator(self.input_A, "d_A")
                 self.rec_B = build_gen_discriminator(self.input_B, "d_B")
@@ -149,8 +157,8 @@ class CycleGAN:
                 self.fake_rec_A = build_gen_discriminator(self.fake_A, "d_A")
                 self.fake_rec_B = build_gen_discriminator(self.fake_B, "d_B")
 
-                self.cyc_A = build_generator_resnet_1block(self.fake_B, "g_B")
-                self.cyc_B = build_generator_resnet_1block(self.fake_A, "g_A")
+                self.cyc_A = build_generator_resnet_2blocks(self.fake_B, "g_B")
+                self.cyc_B = build_generator_resnet_2blocks(self.fake_A, "g_A")
 
                 scope.reuse_variables()
 
@@ -168,6 +176,7 @@ class CycleGAN:
         *_summ -> Summary variables for above loss functions
         '''
 
+        # Generator losses
         diff_from_original_A = tf.reduce_mean(tf.abs(self.input_A-self.cyc_A))
         diff_from_original_B = tf.reduce_mean(tf.abs(self.input_B-self.cyc_B))
         cyc_loss = diff_from_original_A + diff_from_original_B
@@ -178,8 +187,20 @@ class CycleGAN:
         g_loss_A = cyc_loss*10 + disc_loss_B
         g_loss_B = cyc_loss*10 + disc_loss_A
 
-        d_loss_A = (tf.reduce_mean(tf.square(self.fake_pool_rec_A)) + tf.reduce_mean(tf.squared_difference(self.rec_A,1)))/2.0
-        d_loss_B = (tf.reduce_mean(tf.square(self.fake_pool_rec_B)) + tf.reduce_mean(tf.squared_difference(self.rec_B,1)))/2.0
+        # Discriminator losses
+        real_A_recognition_loss = tf.reduce_mean(tf.squared_difference(
+                                                    self.rec_A, 1))
+        fake_A_recognition_loss = tf.reduce_mean(tf.square(
+                                                    self.fake_pool_rec_A))
+        
+        d_loss_A = (fake_A_recognition_loss + real_A_recognition_loss)/2.0
+
+        real_B_recognition_loss = tf.reduce_mean(tf.squared_difference(
+                                                    self.rec_B, 1))
+        fake_B_recognition_loss = tf.reduce_mean(tf.square(
+                                                    self.fake_pool_rec_B))
+
+        d_loss_B = (fake_B_recognition_loss + real_B_recognition_loss)/2.0
 
         optimizer = tf.train.AdamOptimizer(self.lr, beta1=0.5)
         # Returns all variables created with trainable=True
@@ -190,7 +211,7 @@ class CycleGAN:
         g_A_vars = [var for var in self.model_vars if 'g_A' in var.name]
         d_B_vars = [var for var in self.model_vars if 'd_B' in var.name]
         g_B_vars = [var for var in self.model_vars if 'g_B' in var.name]
-        
+
         self.d_A_trainer = optimizer.minimize(d_loss_A, var_list=d_A_vars)
         self.d_B_trainer = optimizer.minimize(d_loss_B, var_list=d_B_vars)
         self.g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars)
@@ -203,7 +224,12 @@ class CycleGAN:
         self.g_A_loss_summ = tf.summary.scalar("g_A_loss", g_loss_A)
         self.g_B_loss_summ = tf.summary.scalar("g_B_loss", g_loss_B)
         self.d_A_loss_summ = tf.summary.scalar("d_A_loss", d_loss_A)
+        self.d_A_real_loss_summ = tf.summary.scalar("d_A_real_recognition_loss", real_A_recognition_loss)
+        self.d_A_fake_loss_summ = tf.summary.scalar("d_A_fake_recognition_loss", fake_A_recognition_loss)
+
         self.d_B_loss_summ = tf.summary.scalar("d_B_loss", d_loss_B)
+        self.d_B_real_loss_summ = tf.summary.scalar("d_B_real_recognition_loss", real_B_recognition_loss)
+        self.d_B_fake_loss_summ = tf.summary.scalar("d_B_fake_recognition_loss", fake_B_recognition_loss)
 
     def train(self):
         '''
@@ -217,28 +243,31 @@ class CycleGAN:
         # Loss function calculations
         self.loss_calc()
         init = (tf.global_variables_initializer(), tf.local_variables_initializer())
+        
         # Saves and restores variables.
-        saver = tf.train.Saver()     
+        saver = tf.train.Saver()
         with tf.Session() as sess:
+
             # run the variables first
             sess.run(init)
+            
             # Read input to nd array
             self.input_read(sess)
             if to_restore:
                 chkpt_fname = tf.train.latest_checkpoint(check_dir)
                 saver.restore(sess, chkpt_fname)
+
             # Writes Summary protocol buffers to event files
-            writer = tf.summary.FileWriter("./output/2")
+            writer = tf.summary.FileWriter(summary_dir)
             if not os.path.exists(check_dir):
                 os.makedirs(check_dir)
-            # print("no problem")
+
             # Training Loop
             for epoch in range(sess.run(self.global_step), EPOCHS):
                 print("In the epoch ", epoch)
                 saver.save(sess, os.path.join(check_dir, "cyclegan"), global_step=epoch)
 
-                # Dealing with the learning rate as per the epoch number
-                # Learning decay
+                # Learning rate decay
                 if(epoch < 100):
                     curr_lr = 0.0002
                 else:
@@ -251,7 +280,6 @@ class CycleGAN:
                     iteration_start = time.time()*1000.0
 
                     # Optimizing the G_A network
-                    # fake B is an image
                     _, fake_B_temp, summary_str = sess.run(
                         [self.g_A_trainer, self.fake_B, self.g_A_loss_summ],
                         feed_dict={
@@ -265,8 +293,9 @@ class CycleGAN:
                     fake_B_temp1 = self.fake_image_pool(self.num_fake_inputs, fake_B_temp, self.fake_images_B)
 
                     # Optimizing the D_B network
-                    _, summary_str = sess.run(
-                        [self.d_B_trainer, self.d_B_loss_summ],
+                    _, summary_str, fake_recogn_loss, real_recogn_loss = sess.run(
+                        [self.d_B_trainer, self.d_B_loss_summ,
+                         self.d_B_fake_loss_summ, self.d_B_real_loss_summ],
                         feed_dict={
                                 self.input_A: self.A_input[ptr],
                                 self.input_B: self.B_input[ptr],
@@ -274,6 +303,8 @@ class CycleGAN:
                                 self.fake_pool_B: fake_B_temp1
                             })
                     writer.add_summary(summary_str, epoch*max_images + ptr)
+                    writer.add_summary(fake_recogn_loss, epoch*max_images + ptr)
+                    writer.add_summary(real_recogn_loss, epoch*max_images + ptr)
 
                     # Optimizing the G_B network
                     _, fake_A_temp, summary_str = sess.run(
@@ -289,8 +320,9 @@ class CycleGAN:
                     fake_A_temp1 = self.fake_image_pool(self.num_fake_inputs, fake_A_temp, self.fake_images_A)
 
                     # Optimizing the D_A network
-                    _, summary_str = sess.run(
-                        [self.d_A_trainer, self.d_A_loss_summ],
+                    _, summary_str, fake_recogn_loss, real_recogn_loss = sess.run(
+                        [self.d_A_trainer, self.d_A_loss_summ,
+                         self.d_A_fake_loss_summ, self.d_A_real_loss_summ],
                         feed_dict={
                                 self.input_A: self.A_input[ptr],
                                 self.input_B: self.B_input[ptr],
@@ -299,6 +331,8 @@ class CycleGAN:
                             })
 
                     writer.add_summary(summary_str, epoch*max_images + ptr)
+                    writer.add_summary(fake_recogn_loss, epoch*max_images + ptr)
+                    writer.add_summary(real_recogn_loss, epoch*max_images + ptr)
 
                     self.num_fake_inputs += 1
 
