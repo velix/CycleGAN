@@ -105,5 +105,5 @@ papers/
 .vscode/
 input/
 output/img/
-output/checkpoints/
-
+output/checkpoints
+.vscode/
