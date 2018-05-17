@@ -18,7 +18,7 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_7"
+summary_dir = "./output/2/exp_8"
 batch_size = 1
 pool_size = 50
 max_images = 100
@@ -51,12 +51,10 @@ class CycleGAN:
         image_A = tf.image.decode_jpeg(image_file_A)
         image_A = tf.image.per_image_standardization(image_A)
         self.image_A = image_A
-        # self.image_A = tf.subtract(tf.div(self.image_A, 14), 1)
 
         image_B = tf.image.decode_jpeg(image_file_B)
         image_B = tf.image.per_image_standardization(image_B)
         self.image_B = image_B
-        # self.image_B = tf.subtract(tf.div(self.image_B, 14), 1)
 
     def input_read(self, sess):
         '''
@@ -86,19 +84,9 @@ class CycleGAN:
             image_tensor = sess.run(self.image_A)
             self.A_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerA))
 
-        print(np.mean(self.A_input[0]))
-        print(np.max(self.A_input[0]))
-        print(np.min(self.A_input[0]))
-        print()
-
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
             self.B_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerB))
-
-        print(np.mean(self.B_input[0]))
-        print(np.max(self.B_input[0]))
-        print(np.min(self.B_input[0]))
-        print()
 
         # for the exception
         coord.request_stop()
@@ -163,7 +151,7 @@ class CycleGAN:
 
                 self.fake_pool_rec_A = build_gen_discriminator(self.fake_pool_A, "d_A")
                 self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
-    
+
     def loss_calc(self):
         '''
         In this function we are defining the variables for
