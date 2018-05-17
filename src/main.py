@@ -19,13 +19,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_4"
+summary_dir = "./output/2/exp_5"
 batch_size = 1
 pool_size = 50
 max_images = 100
 save_training_images = True
 
-EPOCHS = 100
+EPOCHS = 200
 
 
 class CycleGAN:
@@ -192,7 +192,7 @@ class CycleGAN:
                                                     self.rec_A, 1))
         fake_A_recognition_loss = tf.reduce_mean(tf.square(
                                                     self.fake_pool_rec_A))
-        
+
         d_loss_A = (fake_A_recognition_loss + real_A_recognition_loss)/2.0
 
         real_B_recognition_loss = tf.reduce_mean(tf.squared_difference(
@@ -217,10 +217,7 @@ class CycleGAN:
         self.g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars)
         self.g_B_trainer = optimizer.minimize(g_loss_B, var_list=g_B_vars)
 
-        # for var in self.model_vars: print(var.name)
-
         # Summary variables for tensorboard
-
         self.g_A_loss_summ = tf.summary.scalar("g_A_loss", g_loss_A)
         self.g_B_loss_summ = tf.summary.scalar("g_B_loss", g_loss_B)
         self.d_A_loss_summ = tf.summary.scalar("d_A_loss", d_loss_A)
@@ -242,23 +239,26 @@ class CycleGAN:
         self.model_setup()
         # Loss function calculations
         self.loss_calc()
-        init = (tf.global_variables_initializer(), tf.local_variables_initializer())
-        
+        init = (tf.global_variables_initializer(),
+                tf.local_variables_initializer())
+
         # Saves and restores variables.
         saver = tf.train.Saver()
         with tf.Session() as sess:
 
             # run the variables first
             sess.run(init)
-            
+
             # Read input to nd array
             self.input_read(sess)
             if to_restore:
                 chkpt_fname = tf.train.latest_checkpoint(check_dir)
                 saver.restore(sess, chkpt_fname)
 
-            # Writes Summary protocol buffers to event files
+            # Writes Summaries to event files
             writer = tf.summary.FileWriter(summary_dir)
+            writer.add_graph(sess.graph)
+
             if not os.path.exists(check_dir):
                 os.makedirs(check_dir)
 
@@ -341,7 +341,7 @@ class CycleGAN:
 
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
-            writer.add_graph(sess.graph)
+            
 
     def save_training_images(self, sess, epoch):
 
