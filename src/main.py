@@ -19,13 +19,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_5"
+summary_dir = "./output/2/exp_6"
 batch_size = 1
 pool_size = 50
 max_images = 100
 save_training_images = True
 
-EPOCHS = 200
+EPOCHS = 100
 
 
 class CycleGAN:
@@ -50,14 +50,14 @@ class CycleGAN:
         _, image_file_B = image_reader.read(filename_queue_B)
 
         image_A = tf.image.decode_jpeg(image_file_A)
-        image_A = tf.image.per_image_standardization(image_A)
+        # image_A = tf.image.per_image_standardization(image_A)
         self.image_A = image_A
-        # self.image_A = tf.subtract(tf.div(self.image_A, 14), 1)
+        self.image_A = tf.subtract(tf.div(self.image_A, 14), 1)
 
         image_B = tf.image.decode_jpeg(image_file_B)
-        image_B = tf.image.per_image_standardization(image_B)
+        # image_B = tf.image.per_image_standardization(image_B)
         self.image_B = image_B
-        # self.image_B = tf.subtract(tf.div(self.image_B, 14), 1)
+        self.image_B = tf.subtract(tf.div(self.image_B, 14), 1)
 
     def input_read(self, sess):
         '''
@@ -314,7 +314,6 @@ class CycleGAN:
                                 self.input_B: self.B_input[ptr],
                                 self.lr: curr_lr
                             })
-
                     writer.add_summary(summary_str, epoch*max_images + ptr)
 
                     fake_A_temp1 = self.fake_image_pool(self.num_fake_inputs, fake_A_temp, self.fake_images_A)
@@ -336,12 +335,21 @@ class CycleGAN:
 
                     self.num_fake_inputs += 1
 
+                    # if ptr % 99 == 0:
+                    #     input_A_summary = tf.summary.image("input_A", self.A_input[ptr], max_outputs=1)
+                    #     input_B_summary = tf.summary.image("input_B", self.B_input[ptr], max_outputs=1)
+                    #     fake_A_summary = tf.summary.image("fake_A", fake_A_temp1, max_outputs=1)
+                    #     fake_B_summary = tf.summary.image("fake_B", fake_B_temp1, max_outputs=1)
+
+                    #     writer.add_summary(input_A_summary, epoch*max_images + ptr)
+                    #     writer.add_summary(input_B_summary, epoch*max_images + ptr)
+                    #     writer.add_summary(fake_A_summary, epoch*max_images + ptr)
+                    #     writer.add_summary(fake_B_summary, epoch*max_images + ptr)
+
                     iteration_end = time.time()*1000.0
                     print('\ttime: {}'.format(iteration_end-iteration_start))
 
                 sess.run(tf.assign(self.global_step, epoch + 1))
-
-            
 
     def save_training_images(self, sess, epoch):
 
