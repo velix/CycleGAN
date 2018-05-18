@@ -18,7 +18,7 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_10"
+summary_dir = "./output/2/exp_11"
 batch_size = 1
 pool_size = 50
 max_images = 100
@@ -38,7 +38,7 @@ class CycleGAN:
 
         filenames_A = tf.train.match_filenames_once("./input/mnist/*.jpg")
         self.queue_length_A = tf.size(filenames_A)
-        filenames_B = tf.train.match_filenames_once("./input/colorful_mnist/*.jpg")
+        filenames_B = tf.train.match_filenames_once("./input/SVHN/*.jpg")
         self.queue_length_B = tf.size(filenames_B)
 
         filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -54,6 +54,7 @@ class CycleGAN:
         self.image_A = image
 
         image = tf.image.decode_jpeg(image_file_B)
+        image = tf.image.resize_images(image, [img_height, img_width])
         # image = tf.image.per_image_standardization(image)
         image = self._normalize_to_minus_plus_one(image)
         self.image_B = image
@@ -353,6 +354,25 @@ class CycleGAN:
                     iteration_end = time.time()*1000.0
                     print('\ttime: {}'.format(iteration_end-iteration_start))
 
+                    if ptr % 99 == 0:
+                        input_A_summ = tf.summary.image('input_A',
+                                                        self.A_input[ptr][0],
+                                                        max_outputs=1)
+                        input_B_summ = tf.summary.image('input_B',
+                                                        self.B_input[ptr][0],
+                                                        max_outputs=1)
+                        fake_A_summ = tf.summary.image('fake_domain_A',
+                                                       fake_A_temp1,
+                                                       max_outputs=1)
+                        fake_B_summ = tf.summary.image('fake_domain_B',
+                                                       fake_B_temp1,
+                                                       max_outputs=1)
+                        images_summ = tf.summary.merge([input_A_summ,
+                                                        input_B_summ,
+                                                        fake_A_summ,
+                                                        fake_B_summ])
+                        writer.add_summary(images_summ, epoch*max_images + ptr)
+
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
     def save_training_images(self, sess, epoch):
@@ -366,10 +386,10 @@ class CycleGAN:
                 feed_dict={self.input_A: self.A_input[i],
                            self.input_B: self.B_input[i]})
 
-            imsave("./output/imgs/fakeB_" + str(epoch) + "_" + str(i)+".jpg",
+            imsave("./output/imgs/fake_domain_A_" + str(epoch) + "_" + str(i)+".jpg",
                    ((fake_A_temp[0]+1)*16).astype(np.uint8))
 
-            imsave("./output/imgs/fakeA_" + str(epoch) + "_" + str(i)+".jpg",
+            imsave("./output/imgs/fake_domain_B_" + str(epoch) + "_" + str(i)+".jpg",
                    ((fake_B_temp[0]+1)*16).astype(np.uint8))
 
             imsave("./output/imgs/cycA_" + str(epoch) + "_" + str(i)+".jpg",
