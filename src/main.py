@@ -18,7 +18,7 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_14"
+summary_dir = "./output/2/exp_15"
 batch_size = 1
 pool_size = 50
 max_images = 100
@@ -49,14 +49,14 @@ class CycleGAN:
         _, image_file_B = image_reader.read(filename_queue_B)
 
         image = tf.image.decode_jpeg(image_file_A)
-        image = tf.image.per_image_standardization(image)
-        # image = self._normalize_to_minus_plus_one(image)
+        # image = tf.image.per_image_standardization(image)
+        image = self._normalize_to_minus_plus_one(image)
         self.image_A = image
 
         image = tf.image.decode_jpeg(image_file_B)
         image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
-        image = tf.image.per_image_standardization(image)
-        # image = self._normalize_to_minus_plus_one(image)
+        # image = tf.image.per_image_standardization(image)
+        image = self._normalize_to_minus_plus_one(image)
         self.image_B = image
 
     def _normalize_to_minus_plus_one(self, image_tensor):
