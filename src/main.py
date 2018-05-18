@@ -18,7 +18,7 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_9"
+summary_dir = "./output/2/exp_10"
 batch_size = 1
 pool_size = 50
 max_images = 100
@@ -48,13 +48,22 @@ class CycleGAN:
         _, image_file_A = image_reader.read(filename_queue_A)
         _, image_file_B = image_reader.read(filename_queue_B)
 
-        image_A = tf.image.decode_jpeg(image_file_A)
-        image_A = tf.image.per_image_standardization(image_A)
-        self.image_A = image_A
+        image = tf.image.decode_jpeg(image_file_A)
+        # image = tf.image.per_image_standardization(image)
+        image = self._normalize_to_minus_plus_one(image)
+        self.image_A = image
 
-        image_B = tf.image.decode_jpeg(image_file_B)
-        image_B = tf.image.per_image_standardization(image_B)
-        self.image_B = image_B
+        image = tf.image.decode_jpeg(image_file_B)
+        # image = tf.image.per_image_standardization(image)
+        image = self._normalize_to_minus_plus_one(image)
+        self.image_B = image
+
+    def _normalize_to_minus_plus_one(self, image_tensor):
+        return tf.multiply(
+                        2.0,
+                        tf.divide(image_tensor - tf.reduce_min(image_tensor),
+                                  tf.reduce_max(image_tensor) -
+                                  tf.reduce_min(image_tensor))) - 1
 
     def input_read(self, sess):
         '''
@@ -84,9 +93,14 @@ class CycleGAN:
             image_tensor = sess.run(self.image_A)
             self.A_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerA))
 
+        print(np.min(self.A_input[-1]), np.max(self.A_input[-1]))
+
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
             self.B_input[i] = image_tensor.reshape((batch_size, img_height, img_width, img_layerB))
+
+        print(np.min(self.B_input[-1]), np.max(self.B_input[-1]))
+        print()
 
         # for the exception
         coord.request_stop()
@@ -180,14 +194,14 @@ class CycleGAN:
         fake_A_recognition_loss = tf.reduce_mean(tf.square(
                                                     self.fake_pool_rec_A))
 
-        disc_A_full_loss = (fake_A_recognition_loss + real_A_recognition_loss)/4.0
+        disc_A_full_loss = (fake_A_recognition_loss + real_A_recognition_loss)/2.0
 
         real_B_recognition_loss = tf.reduce_mean(tf.squared_difference(
                                                     self.rec_B, 1))
         fake_B_recognition_loss = tf.reduce_mean(tf.square(
                                                     self.fake_pool_rec_B))
 
-        disc_B_full_loss = (fake_B_recognition_loss + real_B_recognition_loss)/4.0
+        disc_B_full_loss = (fake_B_recognition_loss + real_B_recognition_loss)/2.0
 
         optimizer = tf.train.AdamOptimizer(self.lr, beta1=0.5)
         # Returns all variables created with trainable=True

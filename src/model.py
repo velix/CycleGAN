@@ -70,7 +70,6 @@ def build_generator_resnet_1block(inputgen, name="generator"):
         o_c1 = general_conv2d(pad_input, generator_first_layer_filters,
                               kernel=f_stride, stride=1, stddev=0.02,
                               name="c1")
-        
 
         o_c2 = general_conv2d(o_c1, generator_first_layer_filters*2, kernel=ks,
                               stride=stride, stddev=0.02,
