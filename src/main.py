@@ -18,11 +18,11 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_13"
+summary_dir = "./output/2/exp_14"
 batch_size = 1
 pool_size = 50
 max_images = 100
-save_training_images = True
+save_training_images = False
 
 EPOCHS = 100
 
@@ -49,13 +49,13 @@ class CycleGAN:
         _, image_file_B = image_reader.read(filename_queue_B)
 
         image = tf.image.decode_jpeg(image_file_A)
-        # image = tf.image.per_image_standardization(image)
+        image = tf.image.per_image_standardization(image)
         # image = self._normalize_to_minus_plus_one(image)
         self.image_A = image
 
         image = tf.image.decode_jpeg(image_file_B)
         image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
-        # image = tf.image.per_image_standardization(image)
+        image = tf.image.per_image_standardization(image)
         # image = self._normalize_to_minus_plus_one(image)
         self.image_B = image
 
@@ -358,19 +358,23 @@ class CycleGAN:
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
     def _store_image_summaries(self, writer, epoch, fake_A, fake_B, ptr=99):
-        input_A_tensor_summ = tf.summary.image(
-                                    'input_A_tensor',
-                                    tf.convert_to_tensor(
-                                        self.A_inputs_list[ptr]
-                                        ),
-                                    max_outputs=1)
+        if epoch == 0:
+            input_A_tensor_summ = tf.summary.image(
+                                        'input_A_tensor',
+                                        tf.convert_to_tensor(
+                                            self.A_inputs_list[ptr]
+                                            ),
+                                        max_outputs=1)
 
-        input_B_tensor_summ = tf.summary.image(
-                                    'input_B_tensor',
-                                    tf.convert_to_tensor(
-                                        self.B_inputs_list[ptr]
-                                        ),
-                                    max_outputs=1)
+            input_B_tensor_summ = tf.summary.image(
+                                        'input_B_tensor',
+                                        tf.convert_to_tensor(
+                                            self.B_inputs_list[ptr]
+                                            ),
+                                        max_outputs=1)
+
+            writer.add_summary(input_A_tensor_summ.eval(), epoch)
+            writer.add_summary(input_B_tensor_summ.eval(), epoch)
 
         fake_A_summ = tf.summary.image('fake_domain_A',
                                        fake_A,
@@ -380,9 +384,7 @@ class CycleGAN:
                                        fake_B,
                                        max_outputs=1)
 
-        images_summ = tf.summary.merge([input_A_tensor_summ.eval(),
-                                        input_B_tensor_summ.eval(),
-                                        fake_A_summ.eval(),
+        images_summ = tf.summary.merge([fake_A_summ.eval(),
                                         fake_B_summ.eval()])
 
         writer.add_summary(images_summ.eval(), epoch)
