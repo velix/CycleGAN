@@ -18,7 +18,7 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_12"
+summary_dir = "./output/2/exp_13"
 batch_size = 1
 pool_size = 50
 max_images = 100
@@ -54,7 +54,7 @@ class CycleGAN:
         self.image_A = image
 
         image = tf.image.decode_jpeg(image_file_B)
-        image = tf.image.resize_images(image, [img_height, img_width])
+        image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
         # image = tf.image.per_image_standardization(image)
         # image = self._normalize_to_minus_plus_one(image)
         self.image_B = image
@@ -354,7 +354,7 @@ class CycleGAN:
                     iteration_end = time.time()*1000.0
                     print('\ttime: {}'.format(iteration_end-iteration_start))
 
-                self._store_image_summaries(epoch, writer, fake_A_temp1, fake_B_temp1)
+                self._store_image_summaries(writer, epoch, fake_A_temp1, fake_B_temp1)
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
     def _store_image_summaries(self, writer, epoch, fake_A, fake_B, ptr=99):
