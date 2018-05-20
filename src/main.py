@@ -18,13 +18,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_16"
+summary_dir = "./output/2/exp_18"
 batch_size = 1
 pool_size = 50
-max_images = 2000
+max_images = 200
 save_training_images = False
 
-EPOCHS = 20
+EPOCHS = 100
 
 
 class CycleGAN:
@@ -38,7 +38,7 @@ class CycleGAN:
 
         filenames_A = tf.train.match_filenames_once("./input/mnist/*.jpg")
         self.queue_length_A = tf.size(filenames_A)
-        filenames_B = tf.train.match_filenames_once("./input/SVHN/*.jpg")
+        filenames_B = tf.train.match_filenames_once("./input/SVHN/format2/*.jpg")
         self.queue_length_B = tf.size(filenames_B)
 
         filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -204,7 +204,8 @@ class CycleGAN:
 
         disc_B_full_loss = (fake_B_recognition_loss + real_B_recognition_loss)/2.0
 
-        optimizer = tf.train.AdamOptimizer(self.lr, beta1=0.5)
+        adam_opt = tf.train.AdamOptimizer(self.lr, beta1=0.5)
+        sgd_opt = tf.train.GradientDescentOptimizer(1e-3)
         # Returns all variables created with trainable=True
         # A list of Variable objects.
         self.model_vars = tf.trainable_variables()
@@ -214,10 +215,10 @@ class CycleGAN:
         d_B_vars = [var for var in self.model_vars if 'd_B' in var.name]
         g_B_vars = [var for var in self.model_vars if 'g_B' in var.name]
 
-        self.d_A_trainer = optimizer.minimize(disc_A_full_loss, var_list=d_A_vars)
-        self.d_B_trainer = optimizer.minimize(disc_B_full_loss, var_list=d_B_vars)
-        self.g_A_trainer = optimizer.minimize(gen_A_full_loss, var_list=g_A_vars)
-        self.g_B_trainer = optimizer.minimize(gen_B_full_loss, var_list=g_B_vars)
+        self.d_A_trainer = sgd_opt.minimize(disc_A_full_loss, var_list=d_A_vars)
+        self.d_B_trainer = sgd_opt.minimize(disc_B_full_loss, var_list=d_B_vars)
+        self.g_A_trainer = adam_opt.minimize(gen_A_full_loss, var_list=g_A_vars)
+        self.g_B_trainer = adam_opt.minimize(gen_B_full_loss, var_list=g_B_vars)
 
         # Summary variables for tensorboard
         self.gen_A_full_loss_summ = tf.summary.scalar("g_A_loss", gen_A_full_loss)
@@ -354,41 +355,47 @@ class CycleGAN:
                     iteration_end = time.time()*1000.0
                     print('\ttime: {}'.format(iteration_end-iteration_start))
 
-                self.save_training_images(sess, epoch)
-                self._store_image_summaries(writer, epoch, fake_A_temp1, fake_B_temp1)
+                # self.save_training_images(sess, epoch)
+                self._store_image_summaries(writer, sess, epoch)
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
-    def _store_image_summaries(self, writer, epoch, fake_A, fake_B, ptr=99):
-        if epoch == 0:
-            input_A_tensor_summ = tf.summary.image(
-                                        'input_A_tensor',
-                                        tf.convert_to_tensor(
-                                            self.A_inputs_list[ptr]
-                                            ),
+    def _store_image_summaries(self, writer, sess, epoch, ptr=99):
+
+        for i in range(ptr-5, ptr):
+            input_A = self.A_inputs_list[i]
+            input_B = self.B_inputs_list[i]
+            fake_A, fake_B, cyc_A, cyc_B = sess.run(
+                [self.fake_A, self.fake_B, self.cyc_A, self.cyc_B],
+                feed_dict={self.input_A_tensor: input_A,
+                           self.input_B_tensor: input_B})
+            if epoch == 0:
+                input_A_tensor_summ = tf.summary.image(
+                                            'input_A_tensor_i:{}'.format(i),
+                                            tf.convert_to_tensor(input_A),
+                                            max_outputs=1)
+
+                input_B_tensor_summ = tf.summary.image(
+                                            'input_B_tensor_i:{}'.format(i),
+                                            tf.convert_to_tensor(input_B),
+                                            max_outputs=1)
+
+                writer.add_summary(input_A_tensor_summ.eval(), epoch)
+                writer.add_summary(input_B_tensor_summ.eval(), epoch)
+
+            fake_A_summ = tf.summary.image(
+                                        'fake_domain_A_i:{}'.format(i),
+                                        fake_A,
                                         max_outputs=1)
 
-            input_B_tensor_summ = tf.summary.image(
-                                        'input_B_tensor',
-                                        tf.convert_to_tensor(
-                                            self.B_inputs_list[ptr]
-                                            ),
+            fake_B_summ = tf.summary.image(
+                                        'fake_domain_B_i:{}'.format(i),
+                                        fake_B,
                                         max_outputs=1)
 
-            writer.add_summary(input_A_tensor_summ.eval(), epoch)
-            writer.add_summary(input_B_tensor_summ.eval(), epoch)
+            images_summ = tf.summary.merge([fake_A_summ.eval(),
+                                            fake_B_summ.eval()])
 
-        fake_A_summ = tf.summary.image('fake_domain_A',
-                                       fake_A,
-                                       max_outputs=1)
-
-        fake_B_summ = tf.summary.image('fake_domain_B',
-                                       fake_B,
-                                       max_outputs=1)
-
-        images_summ = tf.summary.merge([fake_A_summ.eval(),
-                                        fake_B_summ.eval()])
-
-        writer.add_summary(images_summ.eval(), epoch)
+            writer.add_summary(images_summ.eval(), epoch)
 
     def save_training_images(self, sess, epoch):
 
