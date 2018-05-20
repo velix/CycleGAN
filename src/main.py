@@ -18,13 +18,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_15"
+summary_dir = "./output/2/exp_16"
 batch_size = 1
 pool_size = 50
-max_images = 100
+max_images = 2000
 save_training_images = False
 
-EPOCHS = 100
+EPOCHS = 20
 
 
 class CycleGAN:
@@ -354,6 +354,7 @@ class CycleGAN:
                     iteration_end = time.time()*1000.0
                     print('\ttime: {}'.format(iteration_end-iteration_start))
 
+                self.save_training_images(sess, epoch)
                 self._store_image_summaries(writer, epoch, fake_A_temp1, fake_B_temp1)
                 sess.run(tf.assign(self.global_step, epoch + 1))
 
@@ -400,23 +401,23 @@ class CycleGAN:
                 feed_dict={self.input_A_tensor: self.A_inputs_list[i],
                            self.input_B_tensor: self.B_inputs_list[i]})
 
-            imsave("./output/imgs/fake_domain_A_" + str(epoch) + "_" + str(i)+".jpg",
-                   ((fake_A_temp[0]+1)*16).astype(np.uint8))
+            imsave("./output/imgs/fake_in_domain_A_" + str(epoch) + "_" + str(i)+".jpg",
+                   ((fake_A_temp[0])).astype(np.uint8))
 
-            imsave("./output/imgs/fake_domain_B_" + str(epoch) + "_" + str(i)+".jpg",
-                   ((fake_B_temp[0]+1)*16).astype(np.uint8))
+            imsave("./output/imgs/fake_in_domain_B_" + str(epoch) + "_" + str(i)+".jpg",
+                   ((fake_B_temp[0])).astype(np.uint8))
 
             imsave("./output/imgs/cycA_" + str(epoch) + "_" + str(i)+".jpg",
-                   ((cyc_A_temp[0]+1)*16).astype(np.uint8))
+                   ((cyc_A_temp[0])).astype(np.uint8))
 
             imsave("./output/imgs/cycB_" + str(epoch) + "_" + str(i)+".jpg",
-                   ((cyc_B_temp[0]+1)*16).astype(np.uint8))
+                   ((cyc_B_temp[0])).astype(np.uint8))
 
             imsave("./output/imgs/inputA_" + str(epoch) + "_" + str(i)+".jpg",
-                   ((self.A_inputs_list[i][0]+1)*16).astype(np.uint8))
+                   ((self.A_inputs_list[i][0])).astype(np.uint8))
 
             imsave("./output/imgs/inputB_" + str(epoch) + "_" + str(i)+".jpg",
-                   ((self.B_inputs_list[i][0]+1)*16).astype(np.uint8))
+                   ((self.B_inputs_list[i][0])).astype(np.uint8))
 
     def fake_image_pool(self, num_fakes, fake, fake_pool):
         '''
