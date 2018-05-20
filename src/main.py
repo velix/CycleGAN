@@ -18,9 +18,9 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_16"
+summary_dir = "./output/2/exp_17"
 batch_size = 1
-pool_size = 50
+pool_size = 500
 max_images = 2000
 save_training_images = False
 
@@ -38,7 +38,7 @@ class CycleGAN:
 
         filenames_A = tf.train.match_filenames_once("./input/mnist/*.jpg")
         self.queue_length_A = tf.size(filenames_A)
-        filenames_B = tf.train.match_filenames_once("./input/SVHN/*.jpg")
+        filenames_B = tf.train.match_filenames_once("./input/SVHN/format1/*.jpg")
         self.queue_length_B = tf.size(filenames_B)
 
         filename_queue_A = tf.train.string_input_producer(filenames_A)
