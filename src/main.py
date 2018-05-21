@@ -7,8 +7,8 @@ import time
 
 from model import build_generator_resnet_2blocks, build_gen_discriminator
 
-img_height = 28
-img_width = 28
+img_height = 32
+img_width = 32
 img_layerA = 3
 img_layerB = 3
 img_size = img_height * img_width
@@ -18,13 +18,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_19"
+summary_dir = "./output/2/exp_20"
 batch_size = 1
 pool_size = 500
 max_images = 2000
 save_training_images = False
 
-EPOCHS = 100
+EPOCHS = 20
 
 
 class CycleGAN:
@@ -38,7 +38,7 @@ class CycleGAN:
 
         filenames_A = tf.train.match_filenames_once("./input/mnist/*.jpg")
         self.queue_length_A = tf.size(filenames_A)
-        filenames_B = tf.train.match_filenames_once("./input/SVHN/format1/*.jpg")
+        filenames_B = tf.train.match_filenames_once("./input/SVHN/format2/*.jpg")
         self.queue_length_B = tf.size(filenames_B)
 
         filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -50,11 +50,12 @@ class CycleGAN:
 
         image = tf.image.decode_jpeg(image_file_A)
         # image = tf.image.per_image_standardization(image)
-        image = self._normalize_to_minus_plus_one(image)
+        image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
+	image = self._normalize_to_minus_plus_one(image)
         self.image_A = image
 
         image = tf.image.decode_jpeg(image_file_B)
-        image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
+        # image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
         # image = tf.image.per_image_standardization(image)
         image = self._normalize_to_minus_plus_one(image)
         self.image_B = image
