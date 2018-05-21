@@ -103,3 +103,7 @@ ENV/
 # directories
 papers/
 .vscode/
+input/
+output/img/
+output/checkpoints
+.vscode/

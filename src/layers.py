@@ -1,9 +1,9 @@
 import tensorflow as tf
 
 def lrelu(x, leak=0.2, name='lrelu', alt_relu_impl=False):
-    
+
     with tf.variable_scope(name):
-        # if statemen can be removed 
+        # if statemen can be removed
         if alt_relu_impl:
             f1 = 0.5 * (1 + leak)
             f2 = 0.5 * (1 - leak)
@@ -11,58 +11,111 @@ def lrelu(x, leak=0.2, name='lrelu', alt_relu_impl=False):
         else:
             return tf.maximum(x, leak*x)
 
-# read more about this part
+# Applies Instance Norm
 def instance_norm(x):
 
     with tf.variable_scope("instance_norm"):
         epsilon = 1e-5
         # Calculate the mean and variance of x. [1, 2] means height and width
         mean, var = tf.nn.moments(x, [1, 2], keep_dims=True)
+
         # Gets an existing variable with these parameters or create a new one.
         scale = tf.get_variable('scale', [x.get_shape()[-1]],
-            initializer=tf.truncated_normal_initializer(mean=1.0, stddev=0.02))
-        offset = tf.get_variable('offset',[x.get_shape()[-1]],initializer=tf.constant_initializer(0.0))
+                                initializer=tf.truncated_normal_initializer(
+                                    mean=1.0, stddev=0.02))
+
+        offset = tf.get_variable('offset', [x.get_shape()[-1]],
+                                 initializer=tf.constant_initializer(0.0))
+
         out = scale*tf.div(x-mean, tf.sqrt(var+epsilon)) + offset
 
-        return out    
+        return out
+
 
 '''
-# VALID do not padding, size of the image will be changed
-# f_h and f_w are size of filters, s_h and s_w are stride, o_d is output dimension
-params
-inputs, num of outputs, kernel size, stride size, weights_initializer is using truncated_normal_initializer
-OBS!!! we could change the truncted to the default, weights_initializer=initializers.xavier_initializer()
+VALID do not padding, size of the image will be changed
+OBS!!! we could change the truncted to the default,
+    weights_initializer=initializers.xavier_initializer()
+
+inputconv: input tensor. [batch_size, img_width, img_height, img_layerA]
+output_dim: number of output filters
+kernel: kernel size for each filter
+stride: stride
 '''
-def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID", name="conv2d", do_norm=True, do_relu=True, relufactor=0):
-    
-    # tf.variable_scope() seems to be the preferred mechanism for variable sharing.
+def general_conv2d(inputconv, output_dim=64, kernel=7, stride=1,
+                   stddev=0.02, padding="VALID", name="conv2d",
+                   do_norm=True, do_relu=True, lrelu_slope=0):
+
     with tf.variable_scope(name):
-        conv = tf.contrib.layers.conv2d(inputconv, o_d, f_w, s_w, padding, activation_fn=None, weights_initializer=tf.truncated_normal_initializer(stddev=stddev),biases_initializer=tf.constant_initializer(0.0))
+        # This performs the convolution
+        # There is no normalization done here
+        # and no activation is applies to the output
+        conv = tf.contrib.layers.conv2d(
+                        inputconv, output_dim, kernel, stride, padding,
+                        activation_fn=None,
+                        weights_initializer=tf.truncated_normal_initializer(
+                                                stddev=stddev),
+                        biases_initializer=tf.constant_initializer(0.0))
+
+        # If True, apply normalization
+        # either batch_norm or
+        # instance_norm, definde by us
+        # tf.contrib.layers.instance_norm provides instance
+        # norm implementation
         if do_norm:
             conv = instance_norm(conv)
             # conv = tf.contrib.layers.batch_norm(conv, decay=0.9, updates_collections=None, epsilon=1e-5, scale=True, scope="batch_norm")
-            
+
         if do_relu:
-            if(relufactor == 0):
-                conv = tf.nn.relu(conv,"relu")
+            if(lrelu_slope == 0):
+                conv = tf.nn.relu(conv, "relu")
             else:
-                conv = lrelu(conv, relufactor, "lrelu")
+                # Applies Leaky ReLu
+                # tf.nn.leaky_relu provides implementation, for tf>=1.4
+                conv = lrelu(conv, lrelu_slope, "lrelu")
 
         return conv
 
-def general_deconv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding="VALID", name="deconv2d", do_norm=True, do_relu=True, relufactor=0):
+# Apples inverse convolution
+# inputconv : tensor input
+# output_dim : dimension of the output
+def general_deconv2d(inputconv, output_dim=64, kernel=7,
+                     stride=1, stddev=0.02, padding="VALID",
+                     name="deconv2d", do_norm=True, do_relu=True,
+                     lrelu_slope=0):
+
+    kernel_dim = _make_list(kernel)
+    stride_dim = _make_list(stride)
+
     with tf.variable_scope(name):
-        # filter can be an int if both values are the same, same applies to stride
-        conv = tf.contrib.layers.conv2d_transpose(inputconv, o_d, [f_h, f_w], [s_h, s_w], padding, activation_fn=None, weights_initializer=tf.truncated_normal_initializer(stddev=stddev),biases_initializer=tf.constant_initializer(0.0))
-        
+        # Applies inverse convolution
+        # stride and kernel arguements are lists of two values
+        # specifying the width and height. See docs before changing
+        # Applies no activation function
+        conv = tf.contrib.layers.conv2d_transpose(
+                inputconv, output_dim, kernel_dim,
+                stride_dim, padding, activation_fn=None,
+                weights_initializer=tf.truncated_normal_initializer(
+                                                stddev=stddev),
+                biases_initializer=tf.constant_initializer(0.0))
+
         if do_norm:
             conv = instance_norm(conv)
             # conv = tf.contrib.layers.batch_norm(conv, decay=0.9, updates_collections=None, epsilon=1e-5, scale=True, scope="batch_norm")
-            
+
         if do_relu:
-            if(relufactor == 0):
-                conv = tf.nn.relu(conv,"relu")
+            if(lrelu_slope == 0):
+                conv = tf.nn.relu(conv, "relu")
             else:
-                conv = lrelu(conv, relufactor, "lrelu")
+                conv = lrelu(conv, lrelu_slope, "lrelu")
 
         return conv
+
+
+def _make_list(arg):
+    if type(arg) == list:
+        return arg
+    else:
+        out = [arg, arg]
+
+    return out
