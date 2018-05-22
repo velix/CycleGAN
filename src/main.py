@@ -5,7 +5,7 @@ import os
 import random
 import time
 
-from model import build_generator_resnet_2blocks, build_gen_discriminator
+from model import build_generator_resnet_3blocks, build_gen_discriminator
 
 img_height = 32
 img_width = 32
@@ -18,13 +18,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_21"
+summary_dir = "./output/2/exp_22"
 batch_size = 1
 pool_size = 500
-max_images = 2000
+max_images = 1000
 save_training_images = False
 
-EPOCHS = 150
+EPOCHS = 151
 
 
 class CycleGAN:
@@ -51,7 +51,7 @@ class CycleGAN:
         image = tf.image.decode_jpeg(image_file_A)
         # image = tf.image.per_image_standardization(image)
         image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
-	image = self._normalize_to_minus_plus_one(image)
+        image = self._normalize_to_minus_plus_one(image)
         self.image_A = image
 
         image = tf.image.decode_jpeg(image_file_B)
@@ -149,8 +149,8 @@ class CycleGAN:
             self.lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
             with tf.variable_scope("Model") as scope:
-                self.fake_B = build_generator_resnet_2blocks(self.input_A_tensor, name="g_A")
-                self.fake_A = build_generator_resnet_2blocks(self.input_B_tensor, name="g_B")
+                self.fake_B = build_generator_resnet_3blocks(self.input_A_tensor, name="g_A")
+                self.fake_A = build_generator_resnet_3blocks(self.input_B_tensor, name="g_B")
 
                 self.rec_A = build_gen_discriminator(self.input_A_tensor, "d_A")
                 self.rec_B = build_gen_discriminator(self.input_B_tensor, "d_B")
@@ -160,8 +160,8 @@ class CycleGAN:
                 self.fake_rec_A = build_gen_discriminator(self.fake_A, "d_A")
                 self.fake_rec_B = build_gen_discriminator(self.fake_B, "d_B")
 
-                self.cyc_A = build_generator_resnet_2blocks(self.fake_B, "g_B")
-                self.cyc_B = build_generator_resnet_2blocks(self.fake_A, "g_A")
+                self.cyc_A = build_generator_resnet_3blocks(self.fake_B, "g_B")
+                self.cyc_B = build_generator_resnet_3blocks(self.fake_A, "g_A")
 
                 scope.reuse_variables()
 
@@ -290,7 +290,7 @@ class CycleGAN:
                 saver.save(sess, os.path.join(check_dir, "cyclegan"), global_step=epoch)
 
                 # Learning rate decay
-                if(epoch < 100):
+                if(epoch < 75):
                     curr_lr = 0.0002
                 else:
                     curr_lr = 0.0002 - 0.0002*(epoch-100)/100
@@ -298,7 +298,8 @@ class CycleGAN:
                     self.save_training_images(sess, epoch)
 
                 for ptr in range(0, max_images):
-                    print("In the iteration ", ptr)
+                    if ptr % 100 == 0:
+                        print("In the iteration ", ptr)
                     iteration_start = time.time()*1000.0
 
                     # Optimizing the G_A network
@@ -354,13 +355,13 @@ class CycleGAN:
                     self.num_fake_inputs += 1
 
                     iteration_end = time.time()*1000.0
-                    print('\ttime: {}'.format(iteration_end-iteration_start))
+                    # print('\ttime: {}'.format(iteration_end-iteration_start))
 
                 # self.save_training_images(sess, epoch)
-		if epoch == 0 or epoch % 10 == 0:        
-			self._store_image_summaries(writer, sess, epoch)
-                
-		sess.run(tf.assign(self.global_step, epoch + 1))
+        if epoch == 0 or epoch % 10 == 0:
+            self._store_image_summaries(writer, sess, epoch)
+
+        sess.run(tf.assign(self.global_step, epoch + 1))
 
     def _store_image_summaries(self, writer, sess, epoch, ptr=99):
 
