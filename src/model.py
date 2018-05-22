@@ -61,6 +61,7 @@ def build_generator_resnet_2blocks(inputgen, name="generator"):
         stride = 2
         reflection_padding = 2
 
+        print('GENERATOR')
         print("inputgen shape: ", inputgen.get_shape())
 
         # This pads the inputgen with 0
@@ -136,26 +137,39 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
     with tf.variable_scope(name):
         kernel = 4
 
+        print('DISCRIMINATOR')
+        print('inputdisc: ', inputdisc.get_shape())
         o_c1 = general_conv2d(inputdisc, discriminator_first_layer_filters,
                               kernel=kernel, stride=2, stddev=0.02,
                               padding="SAME", name="c1",
                               do_norm=False, lrelu_slope=0.2)
+        print('o_c1: ', o_c1.get_shape())
+
 
         o_c2 = general_conv2d(o_c1, discriminator_first_layer_filters*2,
                               kernel=kernel, stride=2, stddev=0.02,
                               padding="SAME", name="c2",
                               lrelu_slope=0.2)
+        print('o_c2: ', o_c2.get_shape())
 
         o_c3 = general_conv2d(o_c2, discriminator_first_layer_filters*4,
                               kernel=kernel, stride=2, stddev=0.02,
                               padding="SAME", name="c3",
                               lrelu_slope=0.2)
+        print('o_c3: ', o_c3.get_shape())
 
-        o_c5 = general_conv2d(o_c3, 1,
+        o_c4 = general_conv2d(o_c3, discriminator_first_layer_filters*8,
+                              kernel=kernel, stride=2, stddev=0.02,
+                              padding="SAME", name="c4",
+                              lrelu_slope=0.2)
+        print('o_c4: ', o_c4.get_shape())
+
+        o_c5 = general_conv2d(o_c4, 1,
                               kernel=kernel, stride=1, stddev=0.02,
                               padding="SAME", name="c5",
                               do_norm=False, do_relu=False)
-
+        print('o_c5: ', o_c5.get_shape())
+        print()
         return o_c5
 
 
