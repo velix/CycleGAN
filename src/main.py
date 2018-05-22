@@ -18,13 +18,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_24"
+summary_dir = "./output/2/exp_25"
 batch_size = 1
-pool_size = 500
-max_images = 1000
+pool_size = 750
+max_images = 2000
 save_training_images = False
 
-EPOCHS = 51
+EPOCHS = 200
 
 
 class CycleGAN:
@@ -365,7 +365,7 @@ class CycleGAN:
 
     def _store_image_summaries(self, writer, sess, epoch, ptr=99):
 
-        for i in range(ptr-5, ptr):
+        for i in range(ptr-7, ptr):
             input_A = self.A_inputs_list[i]
             input_B = self.B_inputs_list[i]
             fake_A, fake_B, cyc_A, cyc_B = sess.run(
