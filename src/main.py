@@ -396,8 +396,21 @@ class CycleGAN:
                                         fake_B,
                                         max_outputs=1)
 
+            cyc_A_summ = tf.summary.image(
+                                        'cyc_domain_A_i:{}'.format(i),
+                                        cyc_A,
+                                        max_outputs=1)
+
+            cyc_B_summ = tf.summary.image(
+                                        'cyc_domain_B_i:{}'.format(i),
+                                        cyc_B,
+                                        max_outputs=1)
+
             images_summ = tf.summary.merge([fake_A_summ.eval(),
-                                            fake_B_summ.eval()])
+                                            fake_B_summ.eval(),
+                                            cyc_A_summ.eval(),
+                                            cyc_B_summ.eval()
+                                            ])
 
             writer.add_summary(images_summ.eval(), epoch)
 
