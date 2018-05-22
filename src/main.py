@@ -7,8 +7,8 @@ import time
 
 from model import build_generator_resnet_2blocks, build_gen_discriminator
 
-img_height = 28
-img_width = 28
+img_height = 32
+img_width = 32
 img_layerA = 3
 img_layerB = 3
 img_size = img_height * img_width
@@ -18,13 +18,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_18"
+summary_dir = "./output/2/exp_21"
 batch_size = 1
-pool_size = 50
-max_images = 200
+pool_size = 500
+max_images = 2000
 save_training_images = False
 
-EPOCHS = 100
+EPOCHS = 150
 
 
 class CycleGAN:
@@ -50,11 +50,12 @@ class CycleGAN:
 
         image = tf.image.decode_jpeg(image_file_A)
         # image = tf.image.per_image_standardization(image)
-        image = self._normalize_to_minus_plus_one(image)
+        image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
+	image = self._normalize_to_minus_plus_one(image)
         self.image_A = image
 
         image = tf.image.decode_jpeg(image_file_B)
-        image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
+        # image = tf.image.resize_image_with_crop_or_pad(image, img_height, img_width)
         # image = tf.image.per_image_standardization(image)
         image = self._normalize_to_minus_plus_one(image)
         self.image_B = image
@@ -215,8 +216,8 @@ class CycleGAN:
         d_B_vars = [var for var in self.model_vars if 'd_B' in var.name]
         g_B_vars = [var for var in self.model_vars if 'g_B' in var.name]
 
-        self.d_A_trainer = sgd_opt.minimize(disc_A_full_loss, var_list=d_A_vars)
-        self.d_B_trainer = sgd_opt.minimize(disc_B_full_loss, var_list=d_B_vars)
+        self.d_A_trainer = adam_opt.minimize(disc_A_full_loss, var_list=d_A_vars)
+        self.d_B_trainer = adam_opt.minimize(disc_B_full_loss, var_list=d_B_vars)
         self.g_A_trainer = adam_opt.minimize(gen_A_full_loss, var_list=g_A_vars)
         self.g_B_trainer = adam_opt.minimize(gen_B_full_loss, var_list=g_B_vars)
 
@@ -356,8 +357,10 @@ class CycleGAN:
                     print('\ttime: {}'.format(iteration_end-iteration_start))
 
                 # self.save_training_images(sess, epoch)
-                self._store_image_summaries(writer, sess, epoch)
-                sess.run(tf.assign(self.global_step, epoch + 1))
+		if epoch == 0 or epoch % 10 == 0:        
+			self._store_image_summaries(writer, sess, epoch)
+                
+		sess.run(tf.assign(self.global_step, epoch + 1))
 
     def _store_image_summaries(self, writer, sess, epoch, ptr=99):
 
