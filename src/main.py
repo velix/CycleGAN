@@ -358,8 +358,8 @@ class CycleGAN:
                     # print('\ttime: {}'.format(iteration_end-iteration_start))
 
                 # self.save_training_images(sess, epoch)
-        if epoch == 0 or epoch % 10 == 0:
-            self._store_image_summaries(writer, sess, epoch)
+                if epoch == 0 or epoch % 10 == 0:
+                    self._store_image_summaries(writer, sess, epoch)
 
         sess.run(tf.assign(self.global_step, epoch + 1))
 
