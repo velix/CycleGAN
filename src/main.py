@@ -19,11 +19,11 @@ output_path = "./output"
 check_dir = "./output/checkpoints/"
 summary_dir = "./output/2/exp_25"
 batch_size = 1
-pool_size = 750
-max_images = 2000
+pool_size = 50
+max_images = 200
 save_training_images = False
 
-EPOCHS = 200
+EPOCHS = 100
 
 
 class CycleGAN:
