@@ -17,13 +17,13 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_26"
+summary_dir = "./output/2/exp_27"
 batch_size = 1
 pool_size = 75
 max_images = 200
 save_training_images = False
 
-EPOCHS = 200
+EPOCHS = 100
 
 
 class CycleGAN:
