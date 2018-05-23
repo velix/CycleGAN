@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-from scipy.misc import imsave
 import os
 import random
 import time
@@ -264,6 +263,9 @@ class CycleGAN:
         init = (tf.global_variables_initializer(),
                 tf.local_variables_initializer())
 
+        increase_global_step = global_step.assign(global_step + 1)
+
+
         # Saves and restores variables.
         saver = tf.train.Saver()
         with tf.Session() as sess:
@@ -361,7 +363,7 @@ class CycleGAN:
                 if epoch == 0 or epoch % 10 == 0:
                     self._store_image_summaries(writer, sess, epoch)
 
-            sess.run(tf.assign(self.global_step, epoch + 1))
+            sess.run(tf.assign(increase_global_step)
 
     def _store_image_summaries(self, writer, sess, epoch, ptr=99):
 

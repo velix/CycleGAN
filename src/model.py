@@ -2,10 +2,8 @@
 
 import tensorflow as tf
 import numpy as np
-from scipy.misc import imsave
 import os
 import shutil
-from PIL import Image
 import time
 import random
 
