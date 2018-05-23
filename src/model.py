@@ -40,7 +40,7 @@ def build_resnet_block(inputres, dim, name="resnet"):
     with tf.variable_scope(name):
 
         out_res = tf.pad(inputres, [[0, 0], [1, 1], [1, 1], [0, 0]], "REFLECT")
-
+        
         out_res = general_conv2d(out_res, dim,
                                  kernel=3, stride=1, stddev=0.02,
                                  padding="VALID", name="c1")
