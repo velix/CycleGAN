@@ -17,7 +17,7 @@ to_test = False
 to_restore = False
 output_path = "./output"
 check_dir = "./output/checkpoints/"
-summary_dir = "./output/2/exp_28"
+summary_dir = "./output/2/exp_29"
 batch_size = 1
 pool_size = 75
 max_images = 200
@@ -195,14 +195,14 @@ class CycleGAN:
         fake_A_recognition_loss = tf.reduce_mean(tf.square(
                                                     self.fake_pool_rec_A))
 
-        disc_A_full_loss = (fake_A_recognition_loss + real_A_recognition_loss)/2.0
+        disc_A_full_loss = (fake_A_recognition_loss + real_A_recognition_loss)
 
         real_B_recognition_loss = tf.reduce_mean(tf.squared_difference(
                                                     self.rec_B, 1))
         fake_B_recognition_loss = tf.reduce_mean(tf.square(
                                                     self.fake_pool_rec_B))
 
-        disc_B_full_loss = (fake_B_recognition_loss + real_B_recognition_loss)/2.0
+        disc_B_full_loss = (fake_B_recognition_loss + real_B_recognition_loss)
 
         adam_opt = tf.train.AdamOptimizer(self.lr, beta1=0.5)
         sgd_opt = tf.train.GradientDescentOptimizer(1e-3)
