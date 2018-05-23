@@ -263,7 +263,7 @@ class CycleGAN:
         init = (tf.global_variables_initializer(),
                 tf.local_variables_initializer())
 
-        increase_global_step = global_step.assign(self.global_step + 1)
+        increase_global_step = self.global_step.assign(self.global_step + 1)
 
 
         # Saves and restores variables.
@@ -289,7 +289,7 @@ class CycleGAN:
             # Training Loop
             for epoch in range(sess.run(self.global_step), EPOCHS):
                 print("In the epoch ", epoch)
-                saver.save(sess, os.path.join(check_dir, "cyclegan"), global_step=epoch)
+                # saver.save(sess, os.path.join(check_dir, "cyclegan"), global_step=epoch)
 
                 # Learning rate decay
                 if(epoch < int(np.round(EPOCHS/2))):
