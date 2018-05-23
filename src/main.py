@@ -363,7 +363,7 @@ class CycleGAN:
                 if epoch == 0 or epoch % 10 == 0:
                     self._store_image_summaries(writer, sess, epoch)
 
-                sess.run(tf.assign(increase_global_step))
+                sess.run(increase_global_step)
 
     def _store_image_summaries(self, writer, sess, epoch, ptr=99):
 
