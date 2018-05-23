@@ -154,19 +154,19 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
                               lrelu_slope=0.2)
         print('o_c2: ', o_c2.get_shape())
 
-        o_c3 = general_conv2d(o_c2, discriminator_first_layer_filters*4,
-                              kernel=kernel, stride=2, stddev=0.02,
-                              padding="SAME", name="c3",
-                              lrelu_slope=0.2)
-        print('o_c3: ', o_c3.get_shape())
+        # o_c3 = general_conv2d(o_c2, discriminator_first_layer_filters*4,
+        #                       kernel=kernel, stride=2, stddev=0.02,
+        #                       padding="SAME", name="c3",
+        #                       lrelu_slope=0.2)
+        # print('o_c3: ', o_c3.get_shape())
 
-        o_c4 = general_conv2d(o_c3, discriminator_first_layer_filters*8,
-                              kernel=kernel, stride=2, stddev=0.02,
-                              padding="SAME", name="c4",
-                              lrelu_slope=0.2)
-        print('o_c4: ', o_c4.get_shape())
+        # o_c4 = general_conv2d(o_c3, discriminator_first_layer_filters*8,
+        #                       kernel=kernel, stride=2, stddev=0.02,
+        #                       padding="SAME", name="c4",
+        #                       lrelu_slope=0.2)
+        # print('o_c4: ', o_c4.get_shape())
 
-        o_c5 = general_conv2d(o_c4, 1,
+        o_c5 = general_conv2d(o_c2, 1,
                               kernel=kernel, stride=1, stddev=0.02,
                               padding="SAME", name="c5",
                               do_norm=False, do_relu=False)
