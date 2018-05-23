@@ -141,7 +141,7 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
         patch_input = tf.random_crop(inputdisc,[1, 9, 9, 3])
         print('patch input: ', patch_input.get_shape())
 
-        o_c1 = general_conv2d(inputdisc, discriminator_first_layer_filters,
+        o_c1 = general_conv2d(patch_input, discriminator_first_layer_filters,
                               kernel=kernel, stride=2, stddev=0.02,
                               padding="SAME", name="c1",
                               do_norm=False, lrelu_slope=0.2)

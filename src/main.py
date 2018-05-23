@@ -263,7 +263,7 @@ class CycleGAN:
         init = (tf.global_variables_initializer(),
                 tf.local_variables_initializer())
 
-        increase_global_step = global_step.assign(self.global_step + 1)
+        increase_global_step = self.global_step.assign(self.global_step + 1)
 
 
         # Saves and restores variables.
