@@ -23,7 +23,7 @@ pool_size = 75
 max_images = 200
 save_training_images = False
 
-EPOCHS = 200
+EPOCHS = 70
 
 
 class CycleGAN:

@@ -31,7 +31,7 @@ img_size = img_height * img_width
 
 batch_size = 1
 generator_first_layer_filters = 64
-discriminator_first_layer_filters = 16
+discriminator_first_layer_filters = 64
 
 
 def build_resnet_block(inputres, dim, name="resnet"):
