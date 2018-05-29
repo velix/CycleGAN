@@ -9,20 +9,6 @@ import random
 
 from layers import general_conv2d, general_deconv2d
 
-"""
-For image size 256*256
-img_height = 256
-img_width = 256
-img_layer = 3
-img_size = img_height * img_width
-
-
-batch_size = 1
-pool_size = 50
-generator_first_layer_filters = 32
-discriminator_first_layer_filters = 64
-"""
-
 # update the variables
 img_height = 32
 img_width = 32
@@ -173,20 +159,3 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
         print('o_c5: ', o_c5.get_shape())
         print()
         return o_c5
-
-
-'''
-def patch_discriminator(inputdisc, name="discriminator"):
-
-    with tf.variable_scope(name):
-        f= 4
-
-        patch_input = tf.random_crop(inputdisc,[1,70,70,3])
-        o_c1 = general_conv2d(patch_input, discriminator_first_layer_filters, f, f, 2, 2, 0.02, "SAME", "c1", do_norm="False", lrelu_slope=0.2)
-        o_c2 = general_conv2d(o_c1, discriminator_first_layer_filters*2, f, f, 2, 2, 0.02, "SAME", "c2", lrelu_slope=0.2)
-        o_c3 = general_conv2d(o_c2, discriminator_first_layer_filters*4, f, f, 2, 2, 0.02, "SAME", "c3", lrelu_slope=0.2)
-        o_c4 = general_conv2d(o_c3, discriminator_first_layer_filters*8, f, f, 2, 2, 0.02, "SAME", "c4", lrelu_slope=0.2)
-        o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "c5",do_norm=False,do_relu=False)
-
-        return o_c5
-        '''
