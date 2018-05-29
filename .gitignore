@@ -104,6 +104,9 @@ ENV/
 papers/
 .vscode/
 input/
+!input/mnist
+!input/colorful_mnist
+!input/SVHN
 output/img/
 output/checkpoints
 .vscode/
